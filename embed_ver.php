@@ -1,0 +1,266 @@
+<?php
+// Detalle de ticket — vista slim para iframe en loginMaster.
+// Solo requiere sesión. No requiere BI.
+require_once 'conn.php';
+require_once 'auth.php';
+$noEmpSesion = requiereSesionPage();
+$idTicket = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+if (!$idTicket) {
+    header('Location: embed_mis.php');
+    exit;
+}
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ver Ticket</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="css/estilos.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+        body { background: var(--bg); padding: 1rem; }
+    </style>
+</head>
+<body>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0"><i class="fas fa-ticket-alt me-2 text-primary-custom"></i>Detalle del Ticket — <span id="folioHdr">…</span></h5>
+    <a href="embed_mis.php" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Volver
+    </a>
+</div>
+
+<div class="row g-3">
+    <div class="col-12 col-lg-8">
+
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between">
+                <span id="tituloTicket" class="fw-600">Cargando…</span>
+                <span id="estadoBadge"></span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted fs-7 mb-1"><strong>Descripción:</strong></p>
+                <p id="descripcionTicket" class="mb-3">—</p>
+
+                <div id="linkTicket" class="d-none mb-3">
+                    <p class="text-muted fs-7 mb-1"><strong>Enlace de referencia:</strong></p>
+                    <a id="linkTicketAnchor" href="#" target="_blank" rel="noopener" class="text-break"></a>
+                </div>
+
+                <div id="adjuntosTicket" class="d-none">
+                    <p class="text-muted fs-7 mb-1"><strong>Archivos adjuntos:</strong></p>
+                    <div id="listaAdjuntos" class="d-flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><i class="fas fa-comments me-1"></i>Comentarios</div>
+            <div class="card-body">
+                <div class="chat-container mb-3" id="comentariosContainer">
+                    <p class="text-muted text-center fs-7">Cargando comentarios…</p>
+                </div>
+                <hr>
+                <div>
+                    <label class="form-label fw-600 fs-7">Agregar comentario</label>
+                    <textarea class="form-control mb-2" id="nuevoComentario" rows="3" placeholder="Escribe tu comentario…"></textarea>
+                    <div class="mb-2">
+                        <input type="file" class="form-control form-control-sm" id="adjuntoComentario"
+                               accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt">
+                        <div class="form-text">Adjunto opcional (1 archivo, máx. 10 MB)</div>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button class="btn btn-primary btn-sm" id="btnAgregarComentario" onclick="enviarComentarioEmbed()">
+                            <i class="fas fa-paper-plane me-1"></i>Enviar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="card">
+            <div class="card-header"><i class="fas fa-info-circle me-1"></i>Información</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr><th class="ps-3 fs-7 text-muted" width="40%">Folio</th>
+                            <td class="pe-3 fs-7 fw-600 text-primary-custom folio-badge" id="metaFolio">—</td></tr>
+                        <tr><th class="ps-3 fs-7 text-muted">Estado</th>
+                            <td class="pe-3" id="metaEstado">—</td></tr>
+                        <tr><th class="ps-3 fs-7 text-muted">Prioridad</th>
+                            <td class="pe-3" id="metaPrioridad">—</td></tr>
+                        <tr><th class="ps-3 fs-7 text-muted">Categoría</th>
+                            <td class="pe-3 fs-7" id="metaCategoria">—</td></tr>
+                        <tr><th class="ps-3 fs-7 text-muted">Asignado a</th>
+                            <td class="pe-3 fs-7" id="metaAsignado">—</td></tr>
+                        <tr><th class="ps-3 fs-7 text-muted">Creado</th>
+                            <td class="pe-3 fs-7" id="metaFecha">—</td></tr>
+                        <tr><th class="ps-3 fs-7 text-muted">Actualizado</th>
+                            <td class="pe-3 fs-7" id="metaActualizado">—</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+<script>
+var ID_TICKET = <?= $idTicket ?>;
+
+function getCookie(name) {
+    var m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.*+?^${}()|[\]\\])/g, '\\$1') + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : null;
+}
+function escHtml(str) {
+    if (str == null) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+function messColor(token) {
+    var v = getComputedStyle(document.body).getPropertyValue('--' + token);
+    return (v || '').trim();
+}
+function badgeEstado(estado) {
+    var map = { nuevo:['badge-nuevo','Nuevo'], en_proceso:['badge-en_proceso','En Proceso'], pendiente:['badge-pendiente','Pendiente'], resuelto:['badge-resuelto','Resuelto'], cerrado:['badge-cerrado','Cerrado'] };
+    var d = map[estado] || ['bg-secondary', estado];
+    return '<span class="badge ' + d[0] + '">' + d[1] + '</span>';
+}
+function badgePrioridad(p) {
+    var map = { baja:['badge-baja','Baja'], media:['badge-media','Media'], alta:['badge-alta','Alta'], urgente:['badge-urgente','Urgente'] };
+    var d = map[p] || ['bg-secondary', p];
+    return '<span class="badge ' + d[0] + '">' + d[1] + '</span>';
+}
+function formatearFecha(f) {
+    if (!f) return '—';
+    var d = new Date(f.replace(' ','T'));
+    if (isNaN(d)) return f;
+    var p = function (n) { return String(n).padStart(2,'0'); };
+    return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes());
+}
+function formatearTamano(b) {
+    b = parseInt(b) || 0;
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+    return (b/1048576).toFixed(1) + ' MB';
+}
+
+$(function () {
+    cargarTicket();
+    cargarComentarios();
+});
+
+function cargarTicket() {
+    $.post('acciones_tickets.php', { accion: 'obtenerTicket', id: ID_TICKET }, function (res) {
+        if (!res || !res.success) {
+            Swal.fire({ icon: 'error', text: 'No se pudo cargar el ticket.', confirmButtonColor: messColor('accent') });
+            return;
+        }
+        var t = res.ticket;
+        $('#folioHdr').text(t.folio);
+        $('#tituloTicket').text(t.titulo);
+        $('#estadoBadge').html(badgeEstado(t.estado));
+        $('#descripcionTicket').html(escHtml(t.descripcion).replace(/\n/g,'<br>'));
+        if (t.link) {
+            $('#linkTicketAnchor').attr('href', t.link).text(t.link);
+            $('#linkTicket').removeClass('d-none');
+        }
+        $('#metaFolio').text(t.folio);
+        $('#metaEstado').html(badgeEstado(t.estado));
+        $('#metaPrioridad').html(badgePrioridad(t.prioridad));
+        $('#metaCategoria').text(t.categoria || '—');
+        $('#metaAsignado').text(t.no_empleado_asignado || 'Sin asignar');
+        $('#metaFecha').text(formatearFecha(t.fecha_creacion));
+        $('#metaActualizado').text(formatearFecha(t.fecha_actualizacion));
+
+        if (res.adjuntos && res.adjuntos.length > 0) {
+            var html = '';
+            res.adjuntos.forEach(function (a) {
+                html += '<a href="uploads/' + escHtml(a.ruta) + '" target="_blank" class="adjunto-chip">'
+                    + '<i class="fas fa-paperclip"></i>' + escHtml(a.nombre_archivo)
+                    + ' <small class="opacity-75">(' + formatearTamano(a.tamano) + ')</small></a>';
+            });
+            $('#listaAdjuntos').html(html);
+            $('#adjuntosTicket').removeClass('d-none');
+        }
+    }, 'json');
+}
+
+function cargarComentarios() {
+    $.post('acciones_comentarios.php', { accion: 'obtenerComentarios', id_ticket: ID_TICKET }, function (res) {
+        if (!res) return;
+        var contenedor = document.getElementById('comentariosContainer');
+        if (!res.comentarios || res.comentarios.length === 0) {
+            contenedor.innerHTML = '<p class="text-muted text-center my-3 fs-7">Sin comentarios aún.</p>';
+            return;
+        }
+        var miEmp = getCookie('noEmpleadoL') || '';
+        var html = '';
+        res.comentarios.forEach(function (c) {
+            var esMio = (String(c.no_empleado) === String(miEmp));
+            var cls = esMio ? 'mine' : 'other';
+            var align = esMio ? 'd-flex justify-content-end' : '';
+            html += '<div class="' + align + ' mb-2">'
+                + '<div class="chat-bubble ' + cls + '">'
+                + '<div class="fw-600 fs-8 mb-1">' + escHtml(c.nombre_empleado || c.no_empleado) + '</div>'
+                + '<div>' + escHtml(c.comentario).replace(/\n/g,'<br>') + '</div>';
+            if (c.adjunto) {
+                html += '<div class="mt-2"><a href="uploads/' + escHtml(c.adjunto.ruta) + '" target="_blank" class="adjunto-chip">'
+                    + '<i class="fas fa-paperclip"></i>' + escHtml(c.adjunto.nombre_archivo) + '</a></div>';
+            }
+            html += '<div class="chat-meta">' + formatearFecha(c.fecha) + '</div></div></div>';
+        });
+        contenedor.innerHTML = html;
+        contenedor.scrollTop = contenedor.scrollHeight;
+    }, 'json');
+}
+
+function enviarComentarioEmbed() {
+    var texto = $('#nuevoComentario').val().trim();
+    if (!texto) {
+        Swal.fire({ icon: 'warning', text: 'Escribe un comentario primero.', confirmButtonColor: messColor('accent') });
+        return;
+    }
+    var fd = new FormData();
+    fd.append('accion', 'agregarComentario');
+    fd.append('id_ticket', ID_TICKET);
+    fd.append('no_empleado', getCookie('noEmpleadoL') || '');
+    fd.append('comentario', texto);
+    var adj = document.getElementById('adjuntoComentario');
+    if (adj && adj.files[0]) fd.append('adjunto', adj.files[0]);
+
+    var btn = document.getElementById('btnAgregarComentario');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+    $.ajax({
+        url: 'acciones_comentarios.php', method: 'POST', data: fd,
+        processData: false, contentType: false, dataType: 'json',
+        success: function (res) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Enviar';
+            if (res.success) {
+                $('#nuevoComentario').val('');
+                if (adj) adj.value = '';
+                cargarComentarios();
+            } else {
+                Swal.fire({ icon: 'error', text: res.message || 'Error al enviar.', confirmButtonColor: messColor('accent') });
+            }
+        },
+        error: function () {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Enviar';
+            Swal.fire({ icon: 'error', text: 'Error de comunicación.', confirmButtonColor: messColor('accent') });
+        }
+    });
+}
+</script>
+</body>
+</html>

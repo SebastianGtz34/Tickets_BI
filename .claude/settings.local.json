@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s --cookie \"noEmpleadoL=10001; nombredelusuarioL=Test\" \"http://localhost/Tickets/mis_tickets.php\" -o /tmp/mis.html)",
+      "Read(//tmp/**)",
+      "PowerShell($mysql = \"C:\\\\wamp64\\\\bin\\\\mysql\\\\mysql8.4.7\\\\bin\\\\mysql.exe\"; & $mysql -u root mess_tickets_bi -e \"INSERT INTO tickets_categorias \\(nombre, descripcion, activo\\) VALUES \\('Vacaciones', '', 1\\), \\('Capacitación', '', 1\\), \\('Activos', '', 1\\), \\('Entrada de Equipos', '', 1\\); SELECT id, nombre, activo FROM tickets_categorias ORDER BY nombre;\")"
+    ]
+  }
+}
