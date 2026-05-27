@@ -1,5 +1,5 @@
 <?php
-$noEmpleado = $_COOKIE['noEmpleadoL'] ?? null;
+$noEmpleado = $_COOKIE['noEmpleadoBI'] ?? null;
 if (!$noEmpleado) {
     header('Location: ../loginMaster/index.php');
     exit;

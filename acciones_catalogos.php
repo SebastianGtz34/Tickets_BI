@@ -24,7 +24,8 @@ switch ($accion) {
     case 'obtenerCategorias': {
         $soloActivas = (int)($_POST['solo_activas'] ?? $_GET['solo_activas'] ?? 0);
         $where = $soloActivas ? 'WHERE activo = 1' : '';
-        $res = $conn->query("SELECT * FROM tickets_categorias $where ORDER BY id ASC");
+        // 'Otro / General' siempre al final; el resto mantiene su orden de creación.
+        $res = $conn->query("SELECT * FROM tickets_categorias $where ORDER BY (nombre = 'Otro / General') ASC, id ASC");
         $cats = [];
         while ($r = $res->fetch_assoc()) $cats[] = $r;
         responder(true, '', ['categorias' => $cats]);
@@ -33,7 +34,6 @@ switch ($accion) {
     // ── CREAR CATEGORÍA ───────────────────────────────────────────────────────
     case 'crearCategoria': {
         $nombre = trim($_POST['nombre'] ?? '');
-        $desc   = trim($_POST['descripcion'] ?? '');
 
         if (!$nombre) responder(false, 'El nombre es obligatorio.');
 
@@ -47,9 +47,9 @@ switch ($accion) {
         $chk->close();
 
         $stmt = $conn->prepare(
-            "INSERT INTO tickets_categorias (nombre, descripcion, activo) VALUES (?, ?, 1)"
+            "INSERT INTO tickets_categorias (nombre, activo) VALUES (?, 1)"
         );
-        $stmt->bind_param('ss', $nombre, $desc);
+        $stmt->bind_param('s', $nombre);
         $ok = $stmt->execute();
         $id = (int)$conn->insert_id;
         $stmt->close();
@@ -61,7 +61,6 @@ switch ($accion) {
     case 'actualizarCategoria': {
         $id     = (int)($_POST['id'] ?? 0);
         $nombre = trim($_POST['nombre'] ?? '');
-        $desc   = trim($_POST['descripcion'] ?? '');
 
         if (!$id || !$nombre) responder(false, 'Datos inválidos.');
 
@@ -75,9 +74,9 @@ switch ($accion) {
         $chk->close();
 
         $stmt = $conn->prepare(
-            "UPDATE tickets_categorias SET nombre = ?, descripcion = ? WHERE id = ?"
+            "UPDATE tickets_categorias SET nombre = ? WHERE id = ?"
         );
-        $stmt->bind_param('ssi', $nombre, $desc, $id);
+        $stmt->bind_param('si', $nombre, $id);
         $ok = $stmt->execute();
         $stmt->close();
 

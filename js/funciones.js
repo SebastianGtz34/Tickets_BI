@@ -90,7 +90,7 @@ function obtenerBadgePrioridad(prioridad) {
 
 /** Validar permisos contra loginMaster */
 function validaPermisos(sistema, opcion, callback) {
-    var noEmpleado = getCookie('noEmpleadoL') || '';
+    var noEmpleado = getCookie('noEmpleadoBI') || '';
     $.post('../loginMaster/acciones_globales.php', {
         accion: 'ValidarPermisos',
         noEmpleado: noEmpleado,
@@ -152,7 +152,7 @@ function registrarTicket() {
 
     var fd = new FormData(form);
     fd.append('accion', 'crearTicket');
-    fd.append('no_empleado', getCookie('noEmpleadoL') || '');
+    fd.append('no_empleado', getCookie('noEmpleadoBI') || '');
 
     var btn = document.getElementById('btnEnviarTicket');
     btn.disabled = true;
@@ -195,7 +195,7 @@ function cargarComentarios(idTicket, esBi) {
             return;
         }
 
-        var miEmpleado = getCookie('noEmpleadoL') || '';
+        var miEmpleado = getCookie('noEmpleadoBI') || '';
         var html = '';
 
         res.comentarios.forEach(function (c) {
@@ -237,7 +237,7 @@ function agregarComentario(idTicket, esBi) {
     var fd = new FormData();
     fd.append('accion', 'agregarComentario');
     fd.append('id_ticket', idTicket);
-    fd.append('no_empleado', getCookie('noEmpleadoL') || '');
+    fd.append('no_empleado', getCookie('noEmpleadoBI') || '');
     fd.append('comentario', texto);
     fd.append('es_interno', (internoEl && internoEl.checked) ? 1 : 0);
     if (adjuntoEl && adjuntoEl.files[0]) fd.append('adjunto', adjuntoEl.files[0]);

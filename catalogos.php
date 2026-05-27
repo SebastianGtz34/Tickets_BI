@@ -31,13 +31,12 @@ include 'encabezado.php';
                     <tr>
                         <th>#</th>
                         <th>Nombre</th>
-                        <th>Descripción</th>
                         <th class="text-center">Activo</th>
                         <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tbodyCatalogos">
-                    <tr><td colspan="5" class="text-center py-4 text-muted">Cargando…</td></tr>
+                    <tr><td colspan="4" class="text-center py-4 text-muted">Cargando…</td></tr>
                 </tbody>
             </table>
         </div>
@@ -62,12 +61,6 @@ include 'encabezado.php';
                                required maxlength="100" placeholder="Ej. Control Vehicular">
                         <div class="invalid-feedback">El nombre es obligatorio.</div>
                     </div>
-
-                    <div class="mb-3">
-                        <label for="catDescripcion" class="form-label fw-600">Descripción</label>
-                        <textarea class="form-control" id="catDescripcion" name="descripcion" rows="3"
-                                  placeholder="Descripción opcional de la categoría…"></textarea>
-                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -89,11 +82,11 @@ function cargarCatalogo() {
     ajaxPost('acciones_catalogos.php', { accion: 'obtenerCategorias', solo_activas: 0 }, function (err, res) {
         var tbody = document.getElementById('tbodyCatalogos');
         if (err || !res || !res.success) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error al cargar categorías.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error al cargar categorías.</td></tr>';
             return;
         }
         if (!res.categorias || res.categorias.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Sin categorías registradas.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Sin categorías registradas.</td></tr>';
             return;
         }
         var html = '';
@@ -107,10 +100,9 @@ function cargarCatalogo() {
             html += '<tr>'
                 + '<td class="ps-3 fs-7">' + c.id + '</td>'
                 + '<td class="fw-600">' + escHtml(c.nombre) + '</td>'
-                + '<td class="fs-7 text-muted">' + escHtml(c.descripcion || '—') + '</td>'
                 + '<td class="text-center">' + activoHtml + '</td>'
                 + '<td class="text-center">'
-                    + '<button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModalEditar(' + c.id + ', \'' + escHtml(c.nombre).replace(/'/g, "\\'") + '\', \'' + escHtml(c.descripcion || '').replace(/'/g, "\\'") + '\')">'
+                    + '<button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModalEditar(' + c.id + ', \'' + escHtml(c.nombre).replace(/'/g, "\\'") + '\')">'
                     + '<i class="fas fa-edit"></i></button>'
                     + btnToggle
                 + '</td>'
@@ -124,15 +116,13 @@ function abrirModalNuevo() {
     document.getElementById('formCategoria').classList.remove('was-validated');
     document.getElementById('catId').value = '';
     document.getElementById('catNombre').value = '';
-    document.getElementById('catDescripcion').value = '';
     document.getElementById('modalCategoriaLabel').textContent = 'Nueva Categoría';
 }
 
-function abrirModalEditar(id, nombre, descripcion) {
+function abrirModalEditar(id, nombre) {
     document.getElementById('formCategoria').classList.remove('was-validated');
     document.getElementById('catId').value = id;
     document.getElementById('catNombre').value = nombre;
-    document.getElementById('catDescripcion').value = descripcion;
     document.getElementById('modalCategoriaLabel').textContent = 'Editar Categoría';
     var modal = new bootstrap.Modal(document.getElementById('modalCategoria'));
     modal.show();
@@ -148,8 +138,7 @@ function guardarCategoria() {
     ajaxPost('acciones_catalogos.php', {
         accion: accion,
         id: id,
-        nombre: document.getElementById('catNombre').value.trim(),
-        descripcion: document.getElementById('catDescripcion').value.trim()
+        nombre: document.getElementById('catNombre').value.trim()
     }, function (err, res) {
         if (err || !res) { mostrarAlerta('error', 'Error de comunicación.'); return; }
         if (res.success) {

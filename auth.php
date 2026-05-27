@@ -2,8 +2,8 @@
 /**
  * Helpers de autenticación y autorización para Tickets BI.
  *
- * Patrón: cookie `noEmpleadoL` (set por loginMaster) + tabla cross-DB
- * `mess_rrhh.accesos_especiales` con (sistema='divTicketsBI', opcion='equipo_bi').
+ * Patrón: cookie `noEmpleadoBI` (set por loginMaster) + tabla cross-DB
+ * `mess_rrhh.usuarios.departamento = 32` (equipo BI).
  *
  * Reglas:
  * - Verificación SIEMPRE en backend antes de ejecutar acción protegida.
@@ -12,9 +12,9 @@
 
 if (!function_exists('ticketsAuthNoEmpleado')) {
 
-    /** Devuelve el noEmpleado de la sesión (cookie noEmpleadoL) o null. */
+    /** Devuelve el noEmpleado de la sesión (cookie noEmpleadoBI) o null. */
     function ticketsAuthNoEmpleado(): ?int {
-        $v = $_COOKIE['noEmpleadoL'] ?? null;
+        $v = $_COOKIE['noEmpleadoBI'] ?? null;
         if ($v === null || $v === '') return null;
         $i = (int)$v;
         return $i > 0 ? $i : null;
@@ -43,6 +43,7 @@ if (!function_exists('ticketsAuthNoEmpleado')) {
 
     /**
      * Determina si el empleado pertenece al equipo BI.
+     * Equipo BI = usuarios activos del departamento 32.
      * Cachea el resultado por request en una estática.
      */
     function tieneAccesoBi(mysqli $conn, int $noEmpleado): bool {
@@ -50,9 +51,8 @@ if (!function_exists('ticketsAuthNoEmpleado')) {
         if (isset($cache[$noEmpleado])) return $cache[$noEmpleado];
 
         $stmt = $conn->prepare(
-            "SELECT 1 FROM mess_rrhh.accesos_especiales
-             WHERE noEmpleado = ? AND sistema = 'TicketsBI'
-               AND opcion = 'equipo_bi' AND estatus = 1
+            "SELECT 1 FROM mess_rrhh.usuarios
+             WHERE noEmpleado = ? AND departamento = 32 AND estatus = 1
              LIMIT 1"
         );
         if (!$stmt) return $cache[$noEmpleado] = false;

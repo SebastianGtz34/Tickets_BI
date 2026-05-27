@@ -1,6 +1,6 @@
 <?php
     include_once 'conn.php';
-    if (empty($_COOKIE['noEmpleadoL'])) {
+    if (empty($_COOKIE['noEmpleadoBI'])) {
         echo '<script>window.location.assign("../loginMaster/index.php")</script>';
     }
 
@@ -10,22 +10,19 @@
         return $pagina === $actual ? ' active' : '';
     }
 
-    // Una sola consulta trae todos los accesos especiales del usuario para divTicketsBI.
-    // Cada item del menu lee de $accesos[...] en vez de hacer un fetch.
-    $accesos = [];
+    // Equipo BI = usuarios activos del departamento 32 (cambio 2026-05-25).
+    $esEquipoBi = false;
     $stmtAcc = $conn->prepare(
-        "SELECT opcion FROM mess_rrhh.accesos_especiales
-         WHERE noEmpleado = ? AND sistema = 'TicketsBI' AND estatus = 1"
+        "SELECT 1 FROM mess_rrhh.usuarios
+         WHERE noEmpleado = ? AND departamento = 32 AND estatus = 1 LIMIT 1"
     );
     if ($stmtAcc) {
-        $noEmpMenu = intval($_COOKIE['noEmpleadoL']);
+        $noEmpMenu = intval($_COOKIE['noEmpleadoBI']);
         $stmtAcc->bind_param("i", $noEmpMenu);
         $stmtAcc->execute();
-        $resAcc = $stmtAcc->get_result();
-        while ($r = $resAcc->fetch_assoc()) { $accesos[$r['opcion']] = true; }
+        $esEquipoBi = $stmtAcc->get_result()->num_rows > 0;
         $stmtAcc->close();
     }
-    $esEquipoBi = !empty($accesos['equipo_bi']);
 ?>
 <!-- Sidebar -->
 <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">

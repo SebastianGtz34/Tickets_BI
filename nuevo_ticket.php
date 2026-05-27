@@ -57,6 +57,26 @@ include 'encabezado.php';
                         </div>
                     </div>
 
+                    <div id="bloqueKpi" class="d-none mb-3">
+                        <div class="alert alert-info py-2 px-3 mb-2 fs-7">
+                            <i class="fas fa-chart-line me-1"></i>Esta categoría requiere información del KPI.
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label for="kpi_nombre_tablero" class="form-label fw-600">Nombre del tablero <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="kpi_nombre_tablero" maxlength="200"
+                                       placeholder="Ej. Ventas Mensuales">
+                                <div class="invalid-feedback">Indica el nombre del tablero.</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="kpi_filtros" class="form-label fw-600">Filtros aplicados <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="kpi_filtros" rows="2"
+                                          placeholder="Ej. Año: 2026, Mes: Mayo, Sucursal: Querétaro"></textarea>
+                                <div class="invalid-feedback">Describe los filtros aplicados.</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label for="descripcion" class="form-label fw-600">Descripción <span class="text-danger">*</span></label>
                         <textarea class="form-control" id="descripcion" name="descripcion" rows="5"
@@ -84,7 +104,7 @@ include 'encabezado.php';
                         <a href="mis_tickets.php" class="btn btn-outline-secondary">
                             <i class="fas fa-times me-1"></i>Cancelar
                         </a>
-                        <button type="button" class="btn btn-primary" id="btnEnviarTicket" onclick="registrarTicket()">
+                        <button type="button" class="btn btn-primary" id="btnEnviarTicket" onclick="enviarTicketConKpi()">
                             <i class="fas fa-paper-plane me-1"></i>Enviar Ticket
                         </button>
                     </div>
@@ -96,17 +116,60 @@ include 'encabezado.php';
 </div>
 
 <script>
+var KPI_ID = null;
+
 $(function () {
     // Cargar categorías activas
     ajaxPost('acciones_catalogos.php', { accion: 'obtenerCategorias', solo_activas: 1 }, function (err, res) {
         if (err || !res || !res.success) return;
         var sel = $('#id_categoria');
         res.categorias.forEach(function (c) {
+            if (c.nombre === 'KPI') KPI_ID = String(c.id);
             sel.append('<option value="' + c.id + '">' + escHtml(c.nombre) + '</option>');
         });
         sel.select2({ placeholder: 'Selecciona una categoría…', width: '100%' });
+        sel.on('change', toggleKpiCampos);
     });
 });
+
+function toggleKpiCampos() {
+    var esKpi = (KPI_ID && String($('#id_categoria').val()) === KPI_ID);
+    var $bloque = $('#bloqueKpi');
+    if (esKpi) {
+        $bloque.removeClass('d-none');
+        $('#kpi_nombre_tablero, #kpi_filtros').prop('required', true);
+    } else {
+        $bloque.addClass('d-none');
+        $('#kpi_nombre_tablero, #kpi_filtros')
+            .prop('required', false)
+            .removeClass('is-invalid')
+            .val('');
+    }
+}
+
+function enviarTicketConKpi() {
+    var form = document.getElementById('formNuevoTicket');
+    if (!form) return;
+
+    if (!form.checkValidity()) {
+        form.classList.add('was-validated');
+        return;
+    }
+
+    // Si es KPI, prepender info al campo descripcion (una sola vez)
+    var esKpi = !$('#bloqueKpi').hasClass('d-none');
+    if (esKpi) {
+        var tablero = $('#kpi_nombre_tablero').val().trim();
+        var filtros = $('#kpi_filtros').val().trim();
+        var $desc = $('#descripcion');
+        var descActual = $desc.val();
+        if (descActual.indexOf('[KPI] Tablero:') !== 0) {
+            $desc.val('[KPI] Tablero: ' + tablero + '\nFiltros aplicados: ' + filtros + '\n\n' + descActual);
+        }
+    }
+
+    registrarTicket();
+}
 </script>
 
 <?php include 'pie.php'; ?>
