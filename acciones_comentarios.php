@@ -2,6 +2,7 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once 'conn.php';
 require_once 'auth.php';
+require_once 'acciones_notificaciones.php';
 
 // Sesión obligatoria. Identidad y rol BI derivan del servidor, no del cliente.
 $noEmpSesion = requiereSesionJson();
@@ -26,6 +27,17 @@ switch ($accion) {
 
         if (!$idTicket || !$comentario) {
             responder(false, 'Faltan datos obligatorios.');
+        }
+
+        // Tickets cerrados no aceptan comentarios.
+        $chk = $conn->prepare("SELECT estado FROM tickets WHERE id = ?");
+        $chk->bind_param('i', $idTicket);
+        $chk->execute();
+        $estadoRow = $chk->get_result()->fetch_assoc();
+        $chk->close();
+        if (!$estadoRow) responder(false, 'Ticket no encontrado.');
+        if ($estadoRow['estado'] === 'cerrado') {
+            responder(false, 'Este ticket está cerrado. No se pueden agregar comentarios.');
         }
 
         $stmt = $conn->prepare(
@@ -69,6 +81,9 @@ switch ($accion) {
                 }
             }
         }
+
+        // Notificar al destinatario apropiado (solicitante o BI)
+        tkNotificarComentario($conn, $idTicket, $idComentario, $comentario, (int)$noEmpleado, $esInterno === 1, $esBiSesion);
 
         responder(true, '', ['id' => $idComentario]);
     }

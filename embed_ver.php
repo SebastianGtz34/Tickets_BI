@@ -65,6 +65,9 @@ if (!$idTicket) {
                     <p class="text-muted text-center fs-7">Cargando comentarios…</p>
                 </div>
                 <hr>
+                <div id="avisoTicketCerrado" class="alert alert-secondary py-2 px-3 mb-2 fs-7 d-none">
+                    <i class="fas fa-lock me-1"></i>Este ticket está cerrado. Los comentarios están deshabilitados.
+                </div>
                 <div>
                     <label class="form-label fw-600 fs-7">Agregar comentario</label>
                     <textarea class="form-control mb-2" id="nuevoComentario" rows="3" placeholder="Escribe tu comentario…"></textarea>
@@ -176,9 +179,15 @@ function cargarTicket() {
         $('#metaEstado').html(badgeEstado(t.estado));
         $('#metaPrioridad').html(badgePrioridad(t.prioridad));
         $('#metaCategoria').text(t.categoria || '—');
-        $('#metaAsignado').text(t.no_empleado_asignado || 'Sin asignar');
+        var nombresAsig = (t.asignados || []).map(function (a) { return a.nombre || ('Empleado #' + a.no_empleado); });
+        $('#metaAsignado').text(nombresAsig.length ? nombresAsig.join(', ') : 'Sin asignar');
         $('#metaFecha').text(formatearFecha(t.fecha_creacion));
         $('#metaActualizado').text(formatearFecha(t.fecha_actualizacion));
+
+        // Ticket cerrado: bloquear comentarios
+        var cerrado = (t.estado === 'cerrado');
+        $('#nuevoComentario, #adjuntoComentario, #btnAgregarComentario').prop('disabled', cerrado);
+        $('#avisoTicketCerrado').toggleClass('d-none', !cerrado);
 
         if (res.adjuntos && res.adjuntos.length > 0) {
             var html = '';
@@ -201,7 +210,7 @@ function cargarComentarios() {
             contenedor.innerHTML = '<p class="text-muted text-center my-3 fs-7">Sin comentarios aún.</p>';
             return;
         }
-        var miEmp = getCookie('noEmpleadoL') || '';
+        var miEmp = getCookie('noEmpleadoBI') || '';
         var html = '';
         res.comentarios.forEach(function (c) {
             var esMio = (String(c.no_empleado) === String(miEmp));
@@ -231,7 +240,7 @@ function enviarComentarioEmbed() {
     var fd = new FormData();
     fd.append('accion', 'agregarComentario');
     fd.append('id_ticket', ID_TICKET);
-    fd.append('no_empleado', getCookie('noEmpleadoL') || '');
+    fd.append('no_empleado', getCookie('noEmpleadoBI') || '');
     fd.append('comentario', texto);
     var adj = document.getElementById('adjuntoComentario');
     if (adj && adj.files[0]) fd.append('adjunto', adj.files[0]);

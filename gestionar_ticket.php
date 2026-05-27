@@ -63,6 +63,9 @@ include 'encabezado.php';
                     <p class="text-muted text-center fs-7">Cargando…</p>
                 </div>
                 <hr>
+                <div id="avisoTicketCerrado" class="alert alert-secondary py-2 px-3 mb-2 fs-7 d-none">
+                    <i class="fas fa-lock me-1"></i>Este ticket está cerrado. Los comentarios están deshabilitados.
+                </div>
                 <div>
                     <label class="form-label fw-600 fs-7">Agregar comentario / nota</label>
                     <textarea class="form-control mb-2" id="nuevoComentario" rows="3"
@@ -148,14 +151,11 @@ include 'encabezado.php';
         <div class="card">
             <div class="card-header"><i class="fas fa-user-cog me-1"></i>Asignar Ticket</div>
             <div class="card-body">
-                <div class="input-group input-group-sm">
-                    <input type="text" class="form-control" id="inputAsignar"
-                           placeholder="No. Empleado BI">
-                    <button class="btn btn-primary" onclick="asignarTicket()">
-                        <i class="fas fa-user-check"></i>
-                    </button>
-                </div>
-                <div class="form-text">Ingresa el número de empleado del miembro BI.</div>
+                <select id="selAsignar" multiple class="form-select form-select-sm" style="width:100%"></select>
+                <div class="form-text">Hasta 3 ingenieros del equipo BI.</div>
+                <button class="btn btn-primary btn-sm w-100 mt-2" onclick="asignarTicket()">
+                    <i class="fas fa-user-check me-1"></i>Guardar asignación
+                </button>
             </div>
         </div>
 
@@ -166,9 +166,29 @@ include 'encabezado.php';
 var ID_TICKET = <?= $idTicket ?>;
 
 $(function () {
-    cargarDetalleTicket();
+    cargarEquipoBi(function () {
+        cargarDetalleTicket();
+    });
     cargarComentarios(ID_TICKET, true);
 });
+
+function cargarEquipoBi(cb) {
+    ajaxPost('acciones_tickets.php', { accion: 'obtenerEquipoBi' }, function (err, res) {
+        var $sel = $('#selAsignar');
+        if (!err && res && res.success) {
+            res.miembros.forEach(function (m) {
+                var label = m.nombre ? (m.nombre + ' (#' + m.noEmpleado + ')') : ('Empleado #' + m.noEmpleado);
+                $sel.append('<option value="' + m.noEmpleado + '">' + escHtml(label) + '</option>');
+            });
+        }
+        $sel.select2({
+            placeholder: 'Selecciona ingeniero(s)…',
+            width: '100%',
+            maximumSelectionLength: 3
+        });
+        if (typeof cb === 'function') cb();
+    });
+}
 
 function cargarDetalleTicket() {
     ajaxPost('acciones_tickets.php', { accion: 'obtenerTicket', id: ID_TICKET }, function (err, res) {
@@ -191,12 +211,23 @@ function cargarDetalleTicket() {
         $('#metaEstado').html(obtenerBadgeEstado(t.estado));
         $('#metaPrioridad').html(obtenerBadgePrioridad(t.prioridad));
         $('#metaCategoria').text(t.categoria || '—');
-        $('#metaSolicitante').text(t.no_empleado_solicitante || '—');
-        $('#metaAsignado').text(t.no_empleado_asignado || 'Sin asignar');
+        $('#metaSolicitante').text(t.nombre_solicitante || t.no_empleado_solicitante || '—');
+        var nombresAsig = (t.asignados || []).map(function (a) {
+            return a.nombre || ('Empleado #' + a.no_empleado);
+        });
+        $('#metaAsignado').text(nombresAsig.length ? nombresAsig.join(', ') : 'Sin asignar');
         $('#metaFecha').text(formatearFecha(t.fecha_creacion));
         $('#metaActualizado').text(formatearFecha(t.fecha_actualizacion));
         $('#metaCierre').text(t.fecha_cierre ? formatearFecha(t.fecha_cierre) : '—');
-        if (t.no_empleado_asignado) $('#inputAsignar').val(t.no_empleado_asignado);
+
+        // Preseleccionar asignados en el Select2
+        var ids = (t.asignados || []).map(function (a) { return String(a.no_empleado); });
+        $('#selAsignar').val(ids).trigger('change');
+
+        // Ticket cerrado: bloquear comentarios
+        var cerrado = (t.estado === 'cerrado');
+        $('#nuevoComentario, #adjuntoComentario, #esInterno, #btnAgregarComentario').prop('disabled', cerrado);
+        $('#avisoTicketCerrado').toggleClass('d-none', !cerrado);
 
         if (res.adjuntos && res.adjuntos.length > 0) {
             var html = '';
@@ -215,7 +246,7 @@ function cambiarEstado(nuevoEstado) {
         accion: 'actualizarEstado',
         id: ID_TICKET,
         estado: nuevoEstado,
-        no_empleado: getCookie('noEmpleadoL')
+        no_empleado: getCookie('noEmpleadoBI')
     }, function (err, res) {
         if (err || !res) { mostrarAlerta('error', 'Error de comunicación.'); return; }
         if (res.success) {
@@ -232,7 +263,7 @@ function cerrarTicket() {
         ajaxPost('acciones_tickets.php', {
             accion: 'cerrarTicket',
             id: ID_TICKET,
-            no_empleado: getCookie('noEmpleadoL')
+            no_empleado: getCookie('noEmpleadoBI')
         }, function (err, res) {
             if (err || !res) { mostrarAlerta('error', 'Error de comunicación.'); return; }
             if (res.success) {
@@ -246,21 +277,21 @@ function cerrarTicket() {
 }
 
 function asignarTicket() {
-    var noEmp = $('#inputAsignar').val().trim();
-    if (!noEmp) { mostrarToast('Ingresa un número de empleado.', 'warning'); return; }
-    ajaxPost('acciones_tickets.php', {
-        accion: 'asignarTicket',
-        id: ID_TICKET,
-        no_empleado_asignado: noEmp,
-        no_empleado: getCookie('noEmpleadoL')
-    }, function (err, res) {
-        if (err || !res) { mostrarAlerta('error', 'Error de comunicación.'); return; }
-        if (res.success) {
-            mostrarToast('Ticket asignado a ' + noEmp, 'success');
-            cargarDetalleTicket();
-        } else {
-            mostrarAlerta('error', res.message || 'Error al asignar ticket.');
-        }
+    var seleccion = $('#selAsignar').val() || [];
+    $.ajax({
+        url: 'acciones_tickets.php',
+        method: 'POST',
+        data: { accion: 'asignarTicket', id: ID_TICKET, 'asignados[]': seleccion },
+        dataType: 'json',
+        success: function (res) {
+            if (res && res.success) {
+                mostrarToast(seleccion.length ? 'Asignación guardada.' : 'Asignación eliminada.', 'success');
+                cargarDetalleTicket();
+            } else {
+                mostrarAlerta('error', (res && res.message) || 'Error al asignar ticket.');
+            }
+        },
+        error: function () { mostrarAlerta('error', 'Error de comunicación.'); }
     });
 }
 </script>

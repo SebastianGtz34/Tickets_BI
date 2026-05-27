@@ -127,15 +127,10 @@ include 'encabezado.php';
 
 <script>
 $(function () {
-    var noEmpleado = getCookie('noEmpleadoL');
-    var esBi = false;
-
-    // Verificar rol BI primero
-    validaPermisos('tickets', 'equipo_bi', function (res) {
-        esBi = res && res.tiene_permiso;
-        cargarEstadisticas(noEmpleado, esBi);
-        cargarUltimosTickets(noEmpleado, esBi);
-    });
+    var noEmpleado = getCookie('noEmpleadoBI');
+    // Quien llega a inicio.php ya pasó requiereBiPage server-side: es BI.
+    cargarEstadisticas(noEmpleado, true);
+    cargarUltimosTickets(noEmpleado, true);
 });
 
 var chartCategoria = null;
@@ -206,10 +201,7 @@ function cargarEstadisticas(noEmpleado, esBi) {
 
 // Redibujar gráficas al cambiar de tema (recoge los nuevos colores)
 document.addEventListener('mess:themechange', function () {
-    var noEmpleado = getCookie('noEmpleadoL');
-    validaPermisos('tickets', 'equipo_bi', function (res) {
-        cargarEstadisticas(noEmpleado, res && res.tiene_permiso);
-    });
+    cargarEstadisticas(getCookie('noEmpleadoBI'), true);
 });
 
 function cargarUltimosTickets(noEmpleado, esBi) {

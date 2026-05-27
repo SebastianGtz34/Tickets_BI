@@ -1,5 +1,5 @@
 <?php
-$noEmpleado = $_COOKIE['noEmpleadoL'] ?? null;
+$noEmpleado = $_COOKIE['noEmpleadoBI'] ?? null;
 if (!$noEmpleado) {
     header('Location: ../loginMaster/index.php');
     exit;
@@ -68,7 +68,7 @@ if (!$noEmpleado) {
             <button id="themeToggle" type="button" class="theme-toggle-btn me-2" title="Cambiar tema">
                 <i class="fas fa-moon"></i>
             </button>
-            <a href="logout.php" class="btn btn-sm btn-outline-secondary" title="Cerrar sesión">
+            <a href="logout.php" class="btn btn-sm btn-outline-secondary" title="Volver al panel">
                 <i class="fas fa-sign-out-alt"></i>
             </a>
         </div>
@@ -81,8 +81,8 @@ if (!$noEmpleado) {
 <script>
 // Cargar nombre del empleado
 $(function () {
-    var noEmp  = getCookie('noEmpleadoL');
-    var nombre = getCookie('nombredelusuarioL') || ('Empleado #' + noEmp);
+    var noEmp  = getCookie('noEmpleadoBI');
+    var nombre = getCookie('nombredelusuarioBI') || ('Empleado #' + noEmp);
     $('#nombreUsuario').text(nombre);
 });
 </script>

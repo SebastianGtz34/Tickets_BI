@@ -94,7 +94,7 @@ include 'encabezado.php';
 var dt;
 
 $(function () {
-    var noEmpleado = getCookie('noEmpleadoL');
+    var noEmpleado = getCookie('noEmpleadoBI');
 
     dt = $('#tablaBandeja').DataTable({
         language: { url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/es-MX.json' },
@@ -119,10 +119,10 @@ $(function () {
             { data: 'folio', render: function (v) { return '<span class="folio-badge text-primary-custom">' + escHtml(v) + '</span>'; } },
             { data: 'titulo', render: function (v) { return escHtml(v.length > 45 ? v.substring(0, 45) + '…' : v); } },
             { data: 'categoria', defaultContent: '—' },
-            { data: 'no_empleado_solicitante', defaultContent: '—' },
+            { data: 'nombre_solicitante', defaultContent: '—' },
             { data: 'prioridad', render: function (v) { return obtenerBadgePrioridad(v); } },
             { data: 'estado', render: function (v) { return obtenerBadgeEstado(v); } },
-            { data: 'no_empleado_asignado', render: function (v) { return v ? escHtml(v) : '<span class="text-muted fs-7">Sin asignar</span>'; } },
+            { data: 'asignados_nombres', render: function (v) { return v ? escHtml(v) : '<span class="text-muted fs-7">Sin asignar</span>'; } },
             { data: 'fecha_creacion', render: function (v) { return '<span class="fs-7">' + formatearFecha(v) + '</span>'; } },
             {
                 data: 'id', orderable: false, className: 'text-center',

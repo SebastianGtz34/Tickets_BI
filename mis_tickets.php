@@ -83,7 +83,7 @@ include 'encabezado.php';
 var dt;
 
 $(function () {
-    var noEmpleado = getCookie('noEmpleadoL');
+    var noEmpleado = getCookie('noEmpleadoBI');
 
     dt = $('#tablaMisTickets').DataTable({
         language: { url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/es-MX.json' },

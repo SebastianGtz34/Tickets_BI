@@ -1,6 +1,6 @@
 <?php
 // Vista slim para embeber en loginMaster vía iframe.
-// Solo requiere sesión válida (cookie noEmpleadoL). No requiere rol BI.
+// Solo requiere sesión válida (cookie noEmpleadoBI). No requiere rol BI.
 require_once 'conn.php';
 require_once 'auth.php';
 $noEmpSesion = requiereSesionPage();
@@ -126,7 +126,7 @@ $(function () {
             data: function (d) {
                 return $.extend(d, {
                     accion: 'obtenerTickets',
-                    no_empleado: getCookie('noEmpleadoL'),
+                    no_empleado: getCookie('noEmpleadoBI'),
                     estado: $('#filtroEstado').val(),
                     prioridad: $('#filtroPrioridad').val()
                 });

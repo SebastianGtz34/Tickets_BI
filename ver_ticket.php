@@ -67,6 +67,10 @@ include 'encabezado.php';
 
                 <hr>
 
+                <div id="avisoTicketCerrado" class="alert alert-secondary py-2 px-3 mb-2 fs-7 d-none">
+                    <i class="fas fa-lock me-1"></i>Este ticket está cerrado. Los comentarios están deshabilitados.
+                </div>
+
                 <!-- Formulario comentario -->
                 <div>
                     <label class="form-label fw-600 fs-7">Agregar comentario</label>
@@ -151,10 +155,16 @@ function cargarDetalleTicket() {
         $('#metaEstado').html(obtenerBadgeEstado(t.estado));
         $('#metaPrioridad').html(obtenerBadgePrioridad(t.prioridad));
         $('#metaCategoria').text(t.categoria || '—');
-        $('#metaSolicitante').text(t.no_empleado_solicitante || '—');
-        $('#metaAsignado').text(t.no_empleado_asignado || 'Sin asignar');
+        $('#metaSolicitante').text(t.nombre_solicitante || t.no_empleado_solicitante || '—');
+        var nombresAsig = (t.asignados || []).map(function (a) { return a.nombre || ('Empleado #' + a.no_empleado); });
+        $('#metaAsignado').text(nombresAsig.length ? nombresAsig.join(', ') : 'Sin asignar');
         $('#metaFecha').text(formatearFecha(t.fecha_creacion));
         $('#metaActualizado').text(formatearFecha(t.fecha_actualizacion));
+
+        // Ticket cerrado: bloquear comentarios
+        var cerrado = (t.estado === 'cerrado');
+        $('#nuevoComentario, #adjuntoComentario, #btnAgregarComentario').prop('disabled', cerrado);
+        $('#avisoTicketCerrado').toggleClass('d-none', !cerrado);
 
         if (res.adjuntos && res.adjuntos.length > 0) {
             var html = '';

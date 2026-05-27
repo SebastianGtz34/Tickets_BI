@@ -2,6 +2,7 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once 'conn.php';
 require_once 'auth.php';
+require_once 'acciones_notificaciones.php';
 
 // Sesión válida obligatoria. El cliente puede pasar no_empleado pero solo se usa
 // para datos; las decisiones de privilegios derivan SIEMPRE del servidor.
@@ -27,6 +28,57 @@ function generarFolio(mysqli $conn): string {
     $n = (int)$stmt->get_result()->fetch_assoc()['total'] + 1;
     $stmt->close();
     return sprintf('TKT-%d-%03d', $anio, $n);
+}
+
+/** Lista del equipo BI activo (depto 32): [{noEmpleado, nombre}, …]. */
+function tkObtenerMiembrosBi(mysqli $conn): array {
+    $res = $conn->query(
+        "SELECT noEmpleado, nombre FROM mess_rrhh.usuarios
+         WHERE departamento = 32 AND estatus = 1
+         ORDER BY nombre ASC"
+    );
+    $list = [];
+    if ($res) {
+        while ($r = $res->fetch_assoc()) $list[] = $r;
+    }
+    return $list;
+}
+
+/** Asignados de un ticket: [{no_empleado, nombre}, …]. */
+function tkObtenerAsignados(mysqli $conn, int $idTicket): array {
+    $stmt = $conn->prepare(
+        "SELECT ta.no_empleado, u.nombre
+         FROM tickets_asignados ta
+         LEFT JOIN mess_rrhh.usuarios u ON u.noEmpleado = ta.no_empleado
+         WHERE ta.id_ticket = ?
+         ORDER BY ta.fecha_asignacion ASC"
+    );
+    $stmt->bind_param('i', $idTicket);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $out = [];
+    while ($r = $res->fetch_assoc()) $out[] = $r;
+    $stmt->close();
+    return $out;
+}
+
+/** Filtra una lista de noEmpleado dejando solo los que son del equipo BI (depto 32 activo). */
+function tkFiltrarSoloBi(mysqli $conn, array $noEmps): array {
+    $noEmps = array_values(array_unique(array_filter(array_map('intval', $noEmps))));
+    if (!$noEmps) return [];
+    $ph = implode(',', array_fill(0, count($noEmps), '?'));
+    $stmt = $conn->prepare(
+        "SELECT noEmpleado FROM mess_rrhh.usuarios
+         WHERE departamento = 32 AND estatus = 1
+           AND noEmpleado IN ($ph)"
+    );
+    $stmt->bind_param(str_repeat('i', count($noEmps)), ...$noEmps);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $validos = [];
+    while ($r = $res->fetch_assoc()) $validos[] = (int)$r['noEmpleado'];
+    $stmt->close();
+    return $validos;
 }
 
 function subirAdjunto(array $file, mysqli $conn, int $idTicket, ?int $idComentario = null): void {
@@ -109,6 +161,9 @@ switch ($accion) {
             }
         }
 
+        // Notificar a BI del nuevo ticket
+        tkNotificarNuevoTicket($conn, $idTicket, (int)$noEmpleado, $folio, $titulo);
+
         responder(true, 'Ticket creado.', ['folio' => $folio, 'id' => $idTicket]);
     }
 
@@ -134,7 +189,7 @@ switch ($accion) {
             $types   .= 's';
         }
         if ($soloAsig && $esBi) {
-            $where[] = 't.no_empleado_asignado = ?';
+            $where[] = 'EXISTS (SELECT 1 FROM tickets_asignados ta_f WHERE ta_f.id_ticket = t.id AND ta_f.no_empleado = ?)';
             $params[] = $noEmpleado;
             $types   .= 's';
         }
@@ -161,9 +216,17 @@ switch ($accion) {
 
         $whereStr = implode(' AND ', $where);
         $limitStr = $limite > 0 ? "LIMIT $limite" : '';
-        $sql = "SELECT t.*, c.nombre AS categoria
+        $sql = "SELECT t.*, c.nombre AS categoria,
+                       COALESCE(us.nombre, CONCAT('Empleado #', t.no_empleado_solicitante)) AS nombre_solicitante,
+                       (SELECT GROUP_CONCAT(ta.no_empleado SEPARATOR ',')
+                          FROM tickets_asignados ta WHERE ta.id_ticket = t.id) AS asignados_ids,
+                       (SELECT GROUP_CONCAT(COALESCE(u.nombre, CONCAT('Empleado #', ta.no_empleado)) SEPARATOR ', ')
+                          FROM tickets_asignados ta
+                          LEFT JOIN mess_rrhh.usuarios u ON u.noEmpleado = ta.no_empleado
+                          WHERE ta.id_ticket = t.id) AS asignados_nombres
                 FROM tickets t
                 LEFT JOIN tickets_categorias c ON t.id_categoria = c.id
+                LEFT JOIN mess_rrhh.usuarios us ON us.noEmpleado = t.no_empleado_solicitante
                 WHERE $whereStr
                 ORDER BY t.fecha_creacion DESC
                 $limitStr";
@@ -190,9 +253,11 @@ switch ($accion) {
         if (!$id) responder(false, 'ID inválido.');
 
         $stmt = $conn->prepare(
-            "SELECT t.*, c.nombre AS categoria
+            "SELECT t.*, c.nombre AS categoria,
+                    COALESCE(us.nombre, CONCAT('Empleado #', t.no_empleado_solicitante)) AS nombre_solicitante
              FROM tickets t
              LEFT JOIN tickets_categorias c ON t.id_categoria = c.id
+             LEFT JOIN mess_rrhh.usuarios us ON us.noEmpleado = t.no_empleado_solicitante
              WHERE t.id = ?"
         );
         $stmt->bind_param('i', $id);
@@ -206,6 +271,9 @@ switch ($accion) {
         if (!$esBiSesion && (string)$ticket['no_empleado_solicitante'] !== (string)$noEmpleado) {
             responder(false, 'No tienes permiso para ver este ticket.');
         }
+
+        // Asignados (puede haber hasta 3)
+        $ticket['asignados'] = tkObtenerAsignados($conn, $id);
 
         // Adjuntos del ticket (sin id_comentario)
         $stmt2 = $conn->prepare(
@@ -235,23 +303,86 @@ switch ($accion) {
         $stmt->bind_param('si', $estado, $id);
         $ok = $stmt->execute();
         $stmt->close();
+
+        if ($ok) {
+            tkNotificarCambioEstado($conn, $id, $estado, (int)$noEmpleado);
+        }
         responder($ok, $ok ? '' : 'Error al actualizar estado.');
     }
 
-    // ── ASIGNAR TICKET ─────────────────────────────────────────────────────────
+    // ── ASIGNAR TICKET (hasta 3 ingenieros BI) ────────────────────────────────
     case 'asignarTicket': {
         requiereBiJson($conn, $noEmpSesion);
-        $id       = (int)($_POST['id'] ?? 0);
-        $asignado = trim($_POST['no_empleado_asignado'] ?? '');
-        if (!$id || !$asignado) responder(false, 'Datos inválidos.');
+        $id = (int)($_POST['id'] ?? 0);
+        if (!$id) responder(false, 'ID inválido.');
 
-        $stmt = $conn->prepare(
-            "UPDATE tickets SET no_empleado_asignado = ?, fecha_actualizacion = NOW() WHERE id = ?"
-        );
-        $stmt->bind_param('si', $asignado, $id);
-        $ok = $stmt->execute();
-        $stmt->close();
-        responder($ok, $ok ? '' : 'Error al asignar ticket.');
+        // Acepta array (asignados[]) o string CSV ('523,177,45'). Vacío = limpiar asignación.
+        $raw = $_POST['asignados'] ?? [];
+        if (is_string($raw)) {
+            $raw = $raw !== '' ? array_map('trim', explode(',', $raw)) : [];
+        }
+        $solicitados = array_values(array_unique(array_filter(array_map('intval', $raw))));
+
+        if (count($solicitados) > 3) {
+            responder(false, 'Máximo 3 ingenieros por ticket.');
+        }
+
+        // Validar que TODOS sean miembros BI activos
+        if ($solicitados) {
+            $validos = tkFiltrarSoloBi($conn, $solicitados);
+            $invalidos = array_diff($solicitados, $validos);
+            if ($invalidos) {
+                responder(false, 'No es miembro del equipo BI: ' . implode(', ', $invalidos));
+            }
+        }
+
+        // Asignados previos (para calcular nuevos y notificar solo a esos)
+        $previos = array_map(fn($a) => (int)$a['no_empleado'], tkObtenerAsignados($conn, $id));
+
+        $conn->begin_transaction();
+        try {
+            $del = $conn->prepare("DELETE FROM tickets_asignados WHERE id_ticket = ?");
+            $del->bind_param('i', $id);
+            $del->execute();
+            $del->close();
+
+            if ($solicitados) {
+                $ins = $conn->prepare(
+                    "INSERT INTO tickets_asignados (id_ticket, no_empleado, fecha_asignacion)
+                     VALUES (?, ?, NOW())"
+                );
+                foreach ($solicitados as $emp) {
+                    $empStr = (string)$emp;
+                    $ins->bind_param('is', $id, $empStr);
+                    $ins->execute();
+                }
+                $ins->close();
+            }
+
+            $upd = $conn->prepare("UPDATE tickets SET fecha_actualizacion = NOW() WHERE id = ?");
+            $upd->bind_param('i', $id);
+            $upd->execute();
+            $upd->close();
+
+            $conn->commit();
+        } catch (Throwable $e) {
+            $conn->rollback();
+            responder(false, 'Error al asignar ticket.');
+        }
+
+        // Notificar SOLO a los nuevos (los que no estaban antes)
+        $nuevos = array_values(array_diff($solicitados, $previos));
+        if ($nuevos) {
+            tkNotificarAsignacion($conn, $id, $nuevos, (int)$noEmpleado);
+        }
+
+        responder(true, 'Asignación actualizada.', ['asignados' => tkObtenerAsignados($conn, $id)]);
+    }
+
+    // ── OBTENER EQUIPO BI (para el select de asignación) ──────────────────────
+    case 'obtenerEquipoBi': {
+        requiereBiJson($conn, $noEmpSesion);
+        responder(true, '', ['miembros' => tkObtenerMiembrosBi($conn)]);
     }
 
     // ── CERRAR TICKET ──────────────────────────────────────────────────────────
@@ -266,6 +397,10 @@ switch ($accion) {
         $stmt->bind_param('i', $id);
         $ok = $stmt->execute();
         $stmt->close();
+
+        if ($ok) {
+            tkNotificarCambioEstado($conn, $id, 'cerrado', (int)$noEmpleado);
+        }
         responder($ok, $ok ? '' : 'Error al cerrar ticket.');
     }
 
@@ -353,9 +488,16 @@ switch ($accion) {
         ]);
 
         if ($modoRep) {
+            // Agentes: ahora viven en tickets_asignados. Un ticket con N asignados cuenta N
+            // veces (carga por agente). Tickets sin asignar cuentan como 'Sin asignar'.
             $datos['agentes'] = $ejecutar(
-                "SELECT COALESCE(t.no_empleado_asignado,'Sin asignar') agente, COUNT(*) total
-                 $base GROUP BY agente ORDER BY total DESC LIMIT 10",
+                "SELECT COALESCE(u.nombre, CONCAT('Empleado #', ta.no_empleado), 'Sin asignar') agente, COUNT(*) total
+                 FROM tickets t
+                 LEFT JOIN tickets_categorias c ON t.id_categoria = c.id
+                 LEFT JOIN tickets_asignados ta ON ta.id_ticket = t.id
+                 LEFT JOIN mess_rrhh.usuarios u ON u.noEmpleado = ta.no_empleado
+                 WHERE $whereStr
+                 GROUP BY agente ORDER BY total DESC LIMIT 10",
                 $types, $params
             );
             $datos['prioridades'] = $ejecutar(

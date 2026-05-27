@@ -1,6 +1,6 @@
 <?php
 // Vista slim para embeber en loginMaster vía iframe.
-// Solo requiere sesión válida (cookie noEmpleadoL). No requiere rol BI.
+// Solo requiere sesión válida (cookie noEmpleadoBI). No requiere rol BI.
 require_once 'conn.php';
 require_once 'auth.php';
 $noEmpSesion = requiereSesionPage();
@@ -60,6 +60,26 @@ $noEmpSesion = requiereSesionPage();
                     </div>
                 </div>
 
+                <div id="bloqueKpi" class="d-none mb-3">
+                    <div class="alert alert-info py-2 px-3 mb-2 fs-7">
+                        <i class="fas fa-chart-line me-1"></i>Esta categoría requiere información del KPI.
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label for="kpi_nombre_tablero" class="form-label fw-600">Nombre del tablero <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="kpi_nombre_tablero" maxlength="200"
+                                   placeholder="Ej. Ventas Mensuales">
+                            <div class="invalid-feedback">Indica el nombre del tablero.</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="kpi_filtros" class="form-label fw-600">Filtros aplicados <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="kpi_filtros" rows="2"
+                                      placeholder="Ej. Año: 2026, Mes: Mayo, Sucursal: Querétaro"></textarea>
+                            <div class="invalid-feedback">Describe los filtros aplicados.</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="mb-3">
                     <label for="descripcion" class="form-label fw-600">Descripción <span class="text-danger">*</span></label>
                     <textarea class="form-control" id="descripcion" name="descripcion" rows="5"
@@ -111,6 +131,8 @@ function getCookie(name) {
     return m ? decodeURIComponent(m[1]) : null;
 }
 
+var KPI_ID = null;
+
 $(function () {
     // Cargar categorías activas
     $.ajax({
@@ -122,12 +144,29 @@ $(function () {
             if (!res || !res.success) return;
             var sel = $('#id_categoria');
             res.categorias.forEach(function (c) {
+                if (c.nombre === 'KPI') KPI_ID = String(c.id);
                 sel.append('<option value="' + c.id + '">' + $('<div>').text(c.nombre).html() + '</option>');
             });
             sel.select2({ placeholder: 'Selecciona una categoría…', width: '100%' });
+            sel.on('change', toggleKpiCampos);
         }
     });
 });
+
+function toggleKpiCampos() {
+    var esKpi = (KPI_ID && String($('#id_categoria').val()) === KPI_ID);
+    var $bloque = $('#bloqueKpi');
+    if (esKpi) {
+        $bloque.removeClass('d-none');
+        $('#kpi_nombre_tablero, #kpi_filtros').prop('required', true);
+    } else {
+        $bloque.addClass('d-none');
+        $('#kpi_nombre_tablero, #kpi_filtros')
+            .prop('required', false)
+            .removeClass('is-invalid')
+            .val('');
+    }
+}
 
 function enviarTicketEmbed() {
     var form = document.getElementById('formNuevoTicket');
@@ -136,9 +175,21 @@ function enviarTicketEmbed() {
         return;
     }
 
+    // Si es KPI, prepender info al campo descripcion antes de armar el FormData
+    var esKpi = !$('#bloqueKpi').hasClass('d-none');
+    if (esKpi) {
+        var tablero = $('#kpi_nombre_tablero').val().trim();
+        var filtros = $('#kpi_filtros').val().trim();
+        var $desc = $('#descripcion');
+        var descActual = $desc.val();
+        if (descActual.indexOf('[KPI] Tablero:') !== 0) {
+            $desc.val('[KPI] Tablero: ' + tablero + '\nFiltros aplicados: ' + filtros + '\n\n' + descActual);
+        }
+    }
+
     var fd = new FormData(form);
     fd.append('accion', 'crearTicket');
-    fd.append('no_empleado', getCookie('noEmpleadoL') || '');
+    fd.append('no_empleado', getCookie('noEmpleadoBI') || '');
 
     var btn = document.getElementById('btnEnviarTicket');
     btn.disabled = true;
@@ -165,6 +216,7 @@ function enviarTicketEmbed() {
                     form.reset();
                     form.classList.remove('was-validated');
                     $('#id_categoria').val('').trigger('change');
+                    toggleKpiCampos();
                 });
             } else {
                 Swal.fire({ icon: 'error', text: res.message || 'Error al crear el ticket.', confirmButtonColor: messColor('accent') });
