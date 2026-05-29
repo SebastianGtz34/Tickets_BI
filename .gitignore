@@ -1,2 +1,12 @@
 *.png
+*.JPG
+*.jpeg
+*.gif
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.zip
+*.csv
 conn.php
