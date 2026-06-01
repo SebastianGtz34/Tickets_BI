@@ -144,7 +144,7 @@ $(function () {
             if (!res || !res.success) return;
             var sel = $('#id_categoria');
             res.categorias.forEach(function (c) {
-                if (c.nombre === 'KPI') KPI_ID = String(c.id);
+                if (c.nombre === 'Tableros de KPIs') KPI_ID = String(c.id);
                 sel.append('<option value="' + c.id + '">' + $('<div>').text(c.nombre).html() + '</option>');
             });
             sel.select2({ placeholder: 'Selecciona una categoría…', width: '100%' });
