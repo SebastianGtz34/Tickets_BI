@@ -143,10 +143,15 @@ $(function () {
         success: function (res) {
             if (!res || !res.success) return;
             var sel = $('#id_categoria');
+            var $sistemas = $('<optgroup label="Sistemas MESS">');
+            var $otros    = $('<optgroup label="Otros alcances">');
             res.categorias.forEach(function (c) {
                 if (c.nombre === 'Tableros de KPIs') KPI_ID = String(c.id);
-                sel.append('<option value="' + c.id + '">' + $('<div>').text(c.nombre).html() + '</option>');
+                var opt = '<option value="' + c.id + '">' + $('<div>').text(c.nombre).html() + '</option>';
+                (c.tipo === 'sistema' ? $sistemas : $otros).append(opt);
             });
+            if ($sistemas.children().length) sel.append($sistemas);
+            if ($otros.children().length)    sel.append($otros);
             sel.select2({ placeholder: 'Selecciona una categoría…', width: '100%' });
             sel.on('change', toggleKpiCampos);
         }
@@ -170,10 +175,43 @@ function toggleKpiCampos() {
 
 function enviarTicketEmbed() {
     var form = document.getElementById('formNuevoTicket');
+
+    // La descripción no puede ser solo espacios (mínimo 10 caracteres reales)
+    var $desc = $('#descripcion');
+    if ($desc.val().trim().length < 10) {
+        $desc.addClass('is-invalid').focus();
+        form.classList.add('was-validated');
+        return;
+    }
+    $desc.removeClass('is-invalid');
+
     if (!form.checkValidity()) {
         form.classList.add('was-validated');
         return;
     }
+
+    // Advertir si el enlace no pertenece a Messbook (pero permitir continuar)
+    var link = ($('#link').val() || '').trim();
+    if (link !== '' && link.indexOf('https://messbook.com.mx') !== 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Enlace externo',
+            text: 'El enlace no pertenece a Messbook (messbook.com.mx). ¿Deseas continuar de todas formas?',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, continuar',
+            cancelButtonText: 'Revisar enlace',
+            confirmButtonColor: messColor('accent')
+        }).then(function (r) {
+            if (r.isConfirmed) enviarTicketEmbedConfirmado();
+        });
+        return;
+    }
+
+    enviarTicketEmbedConfirmado();
+}
+
+function enviarTicketEmbedConfirmado() {
+    var form = document.getElementById('formNuevoTicket');
 
     // Si es KPI, prepender info al campo descripcion antes de armar el FormData
     var esKpi = !$('#bloqueKpi').hasClass('d-none');

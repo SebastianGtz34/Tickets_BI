@@ -99,9 +99,11 @@ switch ($accion) {
         // Si no es BI, excluir notas internas
         $filtroInterno = $esBi ? '' : 'AND tc.es_interno = 0';
 
-        $sql = "SELECT tc.*, ta.nombre_archivo, ta.ruta, ta.tamano
+        $sql = "SELECT tc.*, ta.nombre_archivo, ta.ruta, ta.tamano,
+                       COALESCE(u.nombre, CONCAT('Empleado #', tc.no_empleado)) AS nombre_empleado
                 FROM tickets_comentarios tc
                 LEFT JOIN tickets_adjuntos ta ON ta.id_comentario = tc.id
+                LEFT JOIN mess_rrhh.usuarios u ON u.noEmpleado = tc.no_empleado
                 WHERE tc.id_ticket = ? $filtroInterno
                 ORDER BY tc.fecha ASC";
 
@@ -120,8 +122,7 @@ switch ($accion) {
                     'tamano'         => $row['tamano'],
                 ];
             }
-            // Nombre amigable (si no hay tabla de empleados, usamos el número)
-            $row['nombre_empleado'] = 'Empleado #' . $row['no_empleado'];
+            // nombre_empleado ya viene del JOIN con mess_rrhh.usuarios
             $row['adjunto']         = $adjunto;
             unset($row['nombre_archivo'], $row['ruta'], $row['tamano']);
             $comentarios[] = $row;

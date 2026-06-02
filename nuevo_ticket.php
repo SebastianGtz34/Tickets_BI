@@ -123,10 +123,15 @@ $(function () {
     ajaxPost('acciones_catalogos.php', { accion: 'obtenerCategorias', solo_activas: 1 }, function (err, res) {
         if (err || !res || !res.success) return;
         var sel = $('#id_categoria');
+        var $sistemas = $('<optgroup label="Sistemas MESS">');
+        var $otros    = $('<optgroup label="Otros alcances">');
         res.categorias.forEach(function (c) {
             if (c.nombre === 'Tableros de KPIs') KPI_ID = String(c.id);
-            sel.append('<option value="' + c.id + '">' + escHtml(c.nombre) + '</option>');
+            var opt = '<option value="' + c.id + '">' + escHtml(c.nombre) + '</option>';
+            (c.tipo === 'sistema' ? $sistemas : $otros).append(opt);
         });
+        if ($sistemas.children().length) sel.append($sistemas);
+        if ($otros.children().length)    sel.append($otros);
         sel.select2({ placeholder: 'Selecciona una categoría…', width: '100%' });
         sel.on('change', toggleKpiCampos);
     });
@@ -151,6 +156,15 @@ function enviarTicketConKpi() {
     var form = document.getElementById('formNuevoTicket');
     if (!form) return;
 
+    // La descripción no puede ser solo espacios (mínimo 10 caracteres reales)
+    var $desc = $('#descripcion');
+    if ($desc.val().trim().length < 10) {
+        $desc.addClass('is-invalid').focus();
+        form.classList.add('was-validated');
+        return;
+    }
+    $desc.removeClass('is-invalid');
+
     if (!form.checkValidity()) {
         form.classList.add('was-validated');
         return;
@@ -161,11 +175,27 @@ function enviarTicketConKpi() {
     if (esKpi) {
         var tablero = $('#kpi_nombre_tablero').val().trim();
         var filtros = $('#kpi_filtros').val().trim();
-        var $desc = $('#descripcion');
         var descActual = $desc.val();
         if (descActual.indexOf('[KPI] Tablero:') !== 0) {
             $desc.val('[KPI] Tablero: ' + tablero + '\nFiltros aplicados: ' + filtros + '\n\n' + descActual);
         }
+    }
+
+    // Advertir si el enlace no pertenece a Messbook (pero permitir continuar)
+    var link = ($('#link').val() || '').trim();
+    if (link !== '' && link.indexOf('https://messbook.com.mx') !== 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Enlace externo',
+            text: 'El enlace no pertenece a Messbook (messbook.com.mx). ¿Deseas continuar de todas formas?',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, continuar',
+            cancelButtonText: 'Revisar enlace',
+            confirmButtonColor: messColor('accent')
+        }).then(function (r) {
+            if (r.isConfirmed) registrarTicket();
+        });
+        return;
     }
 
     registrarTicket();

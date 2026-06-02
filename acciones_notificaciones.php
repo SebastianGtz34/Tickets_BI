@@ -271,6 +271,37 @@ if (!function_exists('tkNotifEquipoBi')) {
         }
         return $generadas;
     }
+
+    /**
+     * Auto-cierre: tickets en estado 'resuelto' con >=3 días desde fecha_resuelto
+     * se marcan como 'cerrado'. Notifica al solicitante y asignados (id_usuario_actualiza=523).
+     * Devuelve el número de tickets cerrados.
+     */
+    function tkCronCerrarResueltos(mysqli $conn): int {
+        $res = $conn->query(
+            "SELECT id, folio FROM tickets
+             WHERE estado = 'resuelto'
+               AND fecha_resuelto IS NOT NULL
+               AND DATEDIFF(NOW(), fecha_resuelto) >= 3"
+        );
+        if (!$res) return 0;
+
+        $cerrados = 0;
+        $upd = $conn->prepare(
+            "UPDATE tickets SET estado = 'cerrado', fecha_cierre = NOW(), fecha_actualizacion = NOW() WHERE id = ?"
+        );
+        while ($t = $res->fetch_assoc()) {
+            $id = (int)$t['id'];
+            $upd->bind_param('i', $id);
+            if ($upd->execute()) {
+                $cerrados++;
+                // Una vez en 'cerrado' ya no vuelve a entrar al query → sin duplicar notificación.
+                tkNotificarCambioEstado($conn, $id, 'cerrado', 523);
+            }
+        }
+        $upd->close();
+        return $cerrados;
+    }
 }
 
 // ── Router cuando se invoca directo (endpoint AJAX) ──────────────────────────
@@ -288,10 +319,12 @@ if (basename($_SERVER['SCRIPT_FILENAME']) === basename(__FILE__)) {
             requiereBiJson($conn, $noEmpSesion);
             $a = tkNotifCronEstancados($conn);
             $b = tkNotifCronSinAsignar($conn);
+            $c = tkCronCerrarResueltos($conn);
             echo json_encode([
                 'success' => true,
                 'generadas_estancados'  => $a,
-                'generadas_sin_asignar' => $b
+                'generadas_sin_asignar' => $b,
+                'cerrados_automaticos'  => $c
             ]);
             exit;
         }

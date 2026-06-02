@@ -124,6 +124,10 @@ switch ($accion) {
         if (!$titulo || !$descripcion || !$idCat) {
             responder(false, 'Faltan campos obligatorios.');
         }
+        // La descripción no puede ser solo espacios; mínimo 10 caracteres reales.
+        if (mb_strlen($descripcion) < 10) {
+            responder(false, 'La descripción debe tener al menos 10 caracteres (no solo espacios).');
+        }
         if (!in_array($prioridad, $prioridadesValidas, true)) {
             responder(false, 'Prioridad inválida.');
         }
@@ -297,9 +301,17 @@ switch ($accion) {
         $validos = ['nuevo','en_proceso','pendiente','resuelto','cerrado'];
         if (!$id || !in_array($estado, $validos, true)) responder(false, 'Datos inválidos.');
 
-        $stmt = $conn->prepare(
-            "UPDATE tickets SET estado = ?, fecha_actualizacion = NOW() WHERE id = ?"
-        );
+        // fecha_resuelto: se sella al pasar a 'resuelto' (base del auto-cierre a 3 días)
+        // y se limpia si el ticket regresa a cualquier otro estado abierto.
+        if ($estado === 'resuelto') {
+            $stmt = $conn->prepare(
+                "UPDATE tickets SET estado = ?, fecha_resuelto = NOW(), fecha_actualizacion = NOW() WHERE id = ?"
+            );
+        } else {
+            $stmt = $conn->prepare(
+                "UPDATE tickets SET estado = ?, fecha_resuelto = NULL, fecha_actualizacion = NOW() WHERE id = ?"
+            );
+        }
         $stmt->bind_param('si', $estado, $id);
         $ok = $stmt->execute();
         $stmt->close();
