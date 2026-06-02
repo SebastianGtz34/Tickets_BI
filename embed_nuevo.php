@@ -127,8 +127,8 @@ function messColor(token) {
     return (v || '').trim();
 }
 function getCookie(name) {
-    var m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.*+?^${}()|[\]\\])/g, '\\$1') + '=([^;]*)'));
-    return m ? decodeURIComponent(m[1]) : null;
+    const cookies = new URLSearchParams(document.cookie.replace(/; /g, '&'));
+    return cookies.get(name) || undefined;
 }
 
 var KPI_ID = null;

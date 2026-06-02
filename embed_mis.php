@@ -83,8 +83,8 @@ $noEmpSesion = requiereSesionPage();
 <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
 <script>
 function getCookie(name) {
-    var m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.*+?^${}()|[\]\\])/g, '\\$1') + '=([^;]*)'));
-    return m ? decodeURIComponent(m[1]) : null;
+    const cookies = new URLSearchParams(document.cookie.replace(/; /g, '&'));
+    return cookies.get(name) || undefined;
 }
 
 function escHtml(str) {

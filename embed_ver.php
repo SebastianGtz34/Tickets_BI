@@ -120,8 +120,8 @@ if (!$idTicket) {
 var ID_TICKET = <?= $idTicket ?>;
 
 function getCookie(name) {
-    var m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.*+?^${}()|[\]\\])/g, '\\$1') + '=([^;]*)'));
-    return m ? decodeURIComponent(m[1]) : null;
+    const cookies = new URLSearchParams(document.cookie.replace(/; /g, '&'));
+    return cookies.get(name) || undefined;
 }
 function escHtml(str) {
     if (str == null) return '';
