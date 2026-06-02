@@ -15,29 +15,31 @@ USE mess_tickets_bi;
 CREATE TABLE IF NOT EXISTS tickets_categorias (
     id     INT UNSIGNED  NOT NULL AUTO_INCREMENT,
     nombre VARCHAR(100)  NOT NULL,
+    tipo   ENUM('sistema','otro') NOT NULL DEFAULT 'otro'
+           COMMENT 'sistema = módulo interno MESS; otro = otros alcances (KPIs, academy, sitio web, etc.)',
     activo TINYINT(1)    NOT NULL DEFAULT 1,
     PRIMARY KEY (id),
     UNIQUE KEY uq_cat_nombre (nombre)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Datos iniciales de categorías
-INSERT INTO tickets_categorias (nombre, activo) VALUES
-    ('Control Vehicular',  1),
-    ('Control SGC',        1),
-    ('Cotizador IA',       1),
-    ('Forecast',           1),
-    ('Horas Extra',        1),
-    ('Incidencias',        1),
-    ('Planeación',         1),
-    ('Vacaciones',         1),
-    ('Capacitación',       1),
-    ('Activos',            1),
-    ('Entrada de Equipos', 1),
-    ('Otro / General',     1),
-    ('Facturación',        1),
-    ('Messen Academy',     1),
-    ('Sitio Web',          1),
-    ('KPI',                1);
+INSERT INTO tickets_categorias (nombre, tipo, activo) VALUES
+    ('Control Vehicular',  'sistema', 1),
+    ('Control SGC',        'sistema', 1),
+    ('Cotizador IA',       'sistema', 1),
+    ('Forecast',           'sistema', 1),
+    ('Horas Extra',        'sistema', 1),
+    ('Incidencias',        'sistema', 1),
+    ('Planeación',         'sistema', 1),
+    ('Vacaciones',         'sistema', 1),
+    ('Capacitación',       'otro',    1),
+    ('Activos',            'sistema', 1),
+    ('Entrada de Equipos', 'sistema', 1),
+    ('Otro / General',     'otro',    1),
+    ('Facturación',        'otro',    1),
+    ('Messen Academy',     'otro',    1),
+    ('Sitio Web',          'otro',    1),
+    ('Tableros de KPIs',   'otro',    1);
 
 -- ──────────────────────────────────────────────────────────
 --  TABLA: tickets
@@ -54,6 +56,7 @@ CREATE TABLE IF NOT EXISTS tickets (
     no_empleado_solicitante   VARCHAR(50)   NOT NULL,
     fecha_creacion            DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    fecha_resuelto            DATETIME                COMMENT 'Cuándo pasó a estado resuelto; base del auto-cierre a los 3 días',
     fecha_cierre              DATETIME,
     PRIMARY KEY (id),
     UNIQUE KEY uq_folio (folio),

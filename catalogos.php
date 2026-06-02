@@ -31,12 +31,13 @@ include 'encabezado.php';
                     <tr>
                         <th>#</th>
                         <th>Nombre</th>
+                        <th class="text-center">Tipo</th>
                         <th class="text-center">Activo</th>
                         <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tbodyCatalogos">
-                    <tr><td colspan="4" class="text-center py-4 text-muted">Cargando…</td></tr>
+                    <tr><td colspan="5" class="text-center py-4 text-muted">Cargando…</td></tr>
                 </tbody>
             </table>
         </div>
@@ -60,6 +61,15 @@ include 'encabezado.php';
                         <input type="text" class="form-control" id="catNombre" name="nombre"
                                required maxlength="100" placeholder="Ej. Control Vehicular">
                         <div class="invalid-feedback">El nombre es obligatorio.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="catTipo" class="form-label fw-600">Tipo <span class="text-danger">*</span></label>
+                        <select class="form-select" id="catTipo" name="tipo" required>
+                            <option value="sistema">Sistema MESS</option>
+                            <option value="otro">Otro alcance</option>
+                        </select>
+                        <div class="form-text">"Sistema MESS" para módulos internos (Control Vehicular, Incidencias…); "Otro" para alcances como KPIs, Messen Academy, Sitio Web, etc.</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -86,7 +96,7 @@ function cargarCatalogo() {
             return;
         }
         if (!res.categorias || res.categorias.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Sin categorías registradas.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Sin categorías registradas.</td></tr>';
             return;
         }
         var html = '';
@@ -94,15 +104,19 @@ function cargarCatalogo() {
             var activoHtml = c.activo == 1
                 ? '<span class="badge bg-success">Activo</span>'
                 : '<span class="badge bg-secondary">Inactivo</span>';
+            var tipoHtml = c.tipo === 'sistema'
+                ? '<span class="badge bg-primary">Sistema MESS</span>'
+                : '<span class="badge bg-secondary">Otro</span>';
             var btnToggle = c.activo == 1
                 ? '<button class="btn btn-sm btn-outline-warning" onclick="toggleCategoria(' + c.id + ', 0)"><i class="fas fa-ban me-1"></i>Desactivar</button>'
                 : '<button class="btn btn-sm btn-outline-success" onclick="toggleCategoria(' + c.id + ', 1)"><i class="fas fa-check me-1"></i>Activar</button>';
             html += '<tr>'
                 + '<td class="ps-3 fs-7">' + c.id + '</td>'
                 + '<td class="fw-600">' + escHtml(c.nombre) + '</td>'
+                + '<td class="text-center">' + tipoHtml + '</td>'
                 + '<td class="text-center">' + activoHtml + '</td>'
                 + '<td class="text-center">'
-                    + '<button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModalEditar(' + c.id + ', \'' + escHtml(c.nombre).replace(/'/g, "\\'") + '\')">'
+                    + '<button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModalEditar(' + c.id + ', \'' + escHtml(c.nombre).replace(/'/g, "\\'") + '\', \'' + (c.tipo || 'otro') + '\')">'
                     + '<i class="fas fa-edit"></i></button>'
                     + btnToggle
                 + '</td>'
@@ -116,13 +130,15 @@ function abrirModalNuevo() {
     document.getElementById('formCategoria').classList.remove('was-validated');
     document.getElementById('catId').value = '';
     document.getElementById('catNombre').value = '';
+    document.getElementById('catTipo').value = 'sistema';
     document.getElementById('modalCategoriaLabel').textContent = 'Nueva Categoría';
 }
 
-function abrirModalEditar(id, nombre) {
+function abrirModalEditar(id, nombre, tipo) {
     document.getElementById('formCategoria').classList.remove('was-validated');
     document.getElementById('catId').value = id;
     document.getElementById('catNombre').value = nombre;
+    document.getElementById('catTipo').value = (tipo === 'sistema') ? 'sistema' : 'otro';
     document.getElementById('modalCategoriaLabel').textContent = 'Editar Categoría';
     var modal = new bootstrap.Modal(document.getElementById('modalCategoria'));
     modal.show();
@@ -138,7 +154,8 @@ function guardarCategoria() {
     ajaxPost('acciones_catalogos.php', {
         accion: accion,
         id: id,
-        nombre: document.getElementById('catNombre').value.trim()
+        nombre: document.getElementById('catNombre').value.trim(),
+        tipo: document.getElementById('catTipo').value
     }, function (err, res) {
         if (err || !res) { mostrarAlerta('error', 'Error de comunicación.'); return; }
         if (res.success) {
