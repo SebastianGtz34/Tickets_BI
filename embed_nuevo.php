@@ -32,11 +32,13 @@ $noEmpSesion = requiereSesionPage();
         <div class="card-body">
             <form id="formNuevoTicket" novalidate enctype="multipart/form-data">
 
-                <div class="mb-3">
-                    <label for="titulo" class="form-label fw-600">Título <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="titulo" name="titulo"
-                           placeholder="Describe brevemente tu solicitud" required maxlength="200">
-                    <div class="invalid-feedback">El título es obligatorio.</div>
+                <div class="row mb-3 align-items-center">
+                    <label for="titulo" class="col-12 col-md-1 col-form-label fw-600">Título <span class="text-danger">*</span></label>
+                    <div class="col-12 col-md-11">
+                        <input type="text" class="form-control" id="titulo" name="titulo"
+                               placeholder="Describe brevemente tu solicitud" required maxlength="200">
+                        <div class="invalid-feedback">El título es obligatorio.</div>
+                    </div>
                 </div>
 
                 <div class="row g-3 mb-3">
@@ -82,25 +84,26 @@ $noEmpSesion = requiereSesionPage();
 
                 <div class="mb-3">
                     <label for="descripcion" class="form-label fw-600">Descripción <span class="text-danger">*</span></label>
-                    <textarea class="form-control" id="descripcion" name="descripcion" rows="5"
+                    <textarea class="form-control" id="descripcion" name="descripcion" rows="3"
                               placeholder="Describe con detalle tu solicitud…"
                               required minlength="10"></textarea>
                     <div class="invalid-feedback">La descripción es obligatoria (mínimo 10 caracteres).</div>
                 </div>
 
-                <div class="mb-3">
-                    <label for="link" class="form-label fw-600">Enlace de referencia</label>
-                    <input type="url" class="form-control" id="link" name="link"
-                           placeholder="https://… (opcional)" maxlength="500">
-                    <div class="form-text">Si tu solicitud está relacionada con un documento o recurso en línea, pega el enlace aquí.</div>
-                    <div class="invalid-feedback">Ingresa una URL válida (http:// o https://).</div>
-                </div>
-
-                <div class="mb-4">
-                    <label for="adjuntos" class="form-label fw-600">Archivos adjuntos</label>
-                    <input type="file" class="form-control" id="adjuntos" name="adjuntos[]" multiple
-                           accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv">
-                    <div class="form-text">Máx. 5 archivos. (10 MB c/u)</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-12 col-md-6">
+                        <label for="link" class="form-label fw-600">Enlace de referencia</label>
+                        <input type="url" class="form-control" id="link" name="link"
+                               placeholder="https://… (opcional)" maxlength="500">
+                        <div class="form-text">Si tu solicitud está relacionada con un documento o recurso en línea, pega el enlace aquí.</div>
+                        <div class="invalid-feedback">Ingresa una URL válida (http:// o https://).</div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="adjuntos" class="form-label fw-600">Archivos adjuntos</label>
+                        <input type="file" class="form-control" id="adjuntos" name="adjuntos[]" multiple
+                               accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv">
+                        <div class="form-text">Máx. 5 archivos. (10 MB c/u)</div>
+                    </div>
                 </div>
 
                 <div class="d-flex gap-2 justify-content-end">
