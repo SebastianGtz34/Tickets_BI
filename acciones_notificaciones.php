@@ -61,6 +61,43 @@ if (!function_exists('tkNotifEquipoBi')) {
     }
 
     /**
+     * Usuarios que se pueden @mencionar: cualquier empleado activo de mess_rrhh.
+     * Marca es_bi=1 si pertenece al equipo BI (depto 32) para decidir la pantalla
+     * destino de la notificación y la restricción de notas internas.
+     * Devuelve [{noEmpleado:int, nombre:string, es_bi:int}, …].
+     */
+    function tkMencionables(mysqli $conn): array {
+        $out = [];
+        $res = $conn->query(
+            "SELECT noEmpleado, nombre, departamento FROM mess_rrhh.usuarios
+             WHERE estatus = 1
+             ORDER BY nombre ASC"
+        );
+        if ($res) {
+            while ($r = $res->fetch_assoc()) {
+                $id = (int)$r['noEmpleado'];
+                $out[] = [
+                    'noEmpleado' => $id,
+                    'nombre'     => $r['nombre'] ?: ('Empleado #' . $id),
+                    'es_bi'      => ((int)$r['departamento'] === 32) ? 1 : 0,
+                ];
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Pantalla destino para un destinatario en modo lectura (solicitante o mencionado no-gestor):
+     * BI → `ver_ticket` (página completa, requiere BI); no-BI → `embed_ver` (vista slim, solo sesión).
+     * Evita que un usuario fuera del depto 32 caiga en un dead-end al abrir la notificación.
+     */
+    function tkArchivoLectura(mysqli $conn, int $noEmp): string {
+        static $bi = null;
+        if ($bi === null) $bi = array_flip(tkNotifEquipoBi($conn));
+        return isset($bi[$noEmp]) ? 'ver_ticket' : 'embed_ver';
+    }
+
+    /**
      * INSERT en notificacion_historial. Devuelve true si se insertó.
      * Si $dedup=true, no inserta cuando ya exista una NoLeida con
      * (destino + ticketsBI + accion + id_registro_referencia).
@@ -126,7 +163,7 @@ if (!function_exists('tkNotifEquipoBi')) {
 
         // Solicitante
         if ($solicitante !== $actualizadoPor) {
-            tkNotifInsertar($conn, $actualizadoPor, $solicitante, 'CambioEstadoTicket', 'ver_ticket', $idTicket,
+            tkNotifInsertar($conn, $actualizadoPor, $solicitante, 'CambioEstadoTicket', tkArchivoLectura($conn, $solicitante), $idTicket,
                 "Tu ticket {$row['folio']} cambió a \"{$etiqueta}\"");
         }
         // Otros asignados (compañeros)
@@ -165,7 +202,7 @@ if (!function_exists('tkNotifEquipoBi')) {
 
         // Solicitante: entera quién atiende su ticket.
         tkNotifInsertar(
-            $conn, $actualizadoPor, $solicitante, 'AsignacionIngeniero', 'ver_ticket', $idTicket,
+            $conn, $actualizadoPor, $solicitante, 'AsignacionIngeniero', tkArchivoLectura($conn, $solicitante), $idTicket,
             "Tu ticket {$row['folio']} fue asignado a {$nombres}"
         );
 
@@ -209,7 +246,7 @@ if (!function_exists('tkNotifEquipoBi')) {
 
         if ($autorEsBi) {
             // Comentario público de BI → al solicitante + a los otros asignados del ticket.
-            tkNotifInsertar($conn, $autor, $solicitante, 'ComentarioBI', 'ver_ticket', $idTicket,
+            tkNotifInsertar($conn, $autor, $solicitante, 'ComentarioBI', tkArchivoLectura($conn, $solicitante), $idTicket,
                 "BI comentó tu ticket {$row['folio']}{$extracto}");
             foreach (tkNotifReceptoresBi($conn, $idTicket, $autor) as $d) {
                 if ($d === $solicitante) continue;
@@ -222,6 +259,45 @@ if (!function_exists('tkNotifEquipoBi')) {
                 tkNotifInsertar($conn, $autor, $d, 'ComentarioUsuario', 'gestionar_ticket', $idTicket,
                     "El solicitante comentó en {$row['folio']}{$extracto}");
             }
+        }
+    }
+
+    /**
+     * Notifica a los usuarios @mencionados en un comentario.
+     * $mencionados: array de noEmpleado (ya validados como mencionables del ticket).
+     * El destino que sea BI llega a gestionar_ticket; el resto a ver_ticket.
+     */
+    function tkNotificarMencion(mysqli $conn, int $idTicket, string $texto, int $autor, array $mencionados): void {
+        if (!$mencionados) return;
+
+        $stmt = $conn->prepare("SELECT folio FROM tickets WHERE id = ?");
+        $stmt->bind_param('i', $idTicket);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$row) return;
+        $folio = $row['folio'];
+
+        // Nombre del autor para el texto del toast.
+        $nombreAutor = 'Alguien';
+        $st = $conn->prepare("SELECT nombre FROM mess_rrhh.usuarios WHERE noEmpleado = ?");
+        $st->bind_param('i', $autor);
+        $st->execute();
+        $ra = $st->get_result()->fetch_assoc();
+        $st->close();
+        if ($ra && $ra['nombre']) $nombreAutor = $ra['nombre'];
+
+        // Para decidir la pantalla destino según el rol del mencionado.
+        $biSet = array_flip(tkNotifEquipoBi($conn));
+
+        $extracto = mb_substr($texto, 0, 100);
+        $extracto = $extracto !== '' ? ": \"{$extracto}\"" : '';
+
+        foreach ($mencionados as $m) {
+            $m = (int)$m;
+            $archivo = isset($biSet[$m]) ? 'gestionar_ticket' : 'embed_ver';
+            tkNotifInsertar($conn, $autor, $m, 'MencionComentario', $archivo, $idTicket,
+                "{$nombreAutor} te mencionó en {$folio}{$extracto}");
         }
     }
 

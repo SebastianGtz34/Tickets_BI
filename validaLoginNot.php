@@ -71,6 +71,7 @@ if (!$valido) {
 $urlPorArchivo = [
     'gestionar_ticket' => '/Tickets/gestionar_ticket.php',
     'ver_ticket'       => '/Tickets/ver_ticket.php',
+    'embed_ver'        => '/Tickets/embed_ver.php', // destino para no-BI (solo requiere sesión)
 ];
 
 $urlDestino = $urlPorArchivo[$archivo] ?? '';

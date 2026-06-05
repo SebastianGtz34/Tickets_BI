@@ -19,6 +19,7 @@ if (!$idTicket) {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="css/tribute.css">
     <link rel="stylesheet" href="css/estilos.css">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <style>
@@ -29,7 +30,7 @@ if (!$idTicket) {
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0"><i class="fas fa-ticket-alt me-2 text-primary-custom"></i>Detalle del Ticket — <span id="folioHdr">…</span></h5>
-    <a href="embed_mis.php" class="btn btn-sm btn-outline-secondary">
+    <a href="embed_mis.php" class="btn btn-sm btn-outline-mess-naranja">
         <i class="fas fa-arrow-left me-1"></i>Volver
     </a>
 </div>
@@ -70,7 +71,7 @@ if (!$idTicket) {
                 </div>
                 <div>
                     <label class="form-label fw-600 fs-7">Agregar comentario</label>
-                    <textarea class="form-control mb-2" id="nuevoComentario" rows="3" placeholder="Escribe tu comentario…"></textarea>
+                    <textarea class="form-control mb-2" id="nuevoComentario" rows="3" placeholder="Escribe tu comentario… (usa @ para mencionar)"></textarea>
                     <div class="mb-2">
                         <input type="file" class="form-control form-control-sm" id="adjuntoComentario"
                                accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt">
@@ -115,6 +116,7 @@ if (!$idTicket) {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/tribute.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 <script>
 var ID_TICKET = <?= $idTicket ?>;
@@ -155,10 +157,48 @@ function formatearTamano(b) {
     return (b/1048576).toFixed(1) + ' MB';
 }
 
+var _embTribute = null, _embTokens = [];
+
 $(function () {
     cargarTicket();
     cargarComentarios();
+    initMencionesEmbed();
 });
+
+/** Activa el autocompletar "@" en el textarea con el directorio de empleados activos. */
+function initMencionesEmbed() {
+    var ta = document.getElementById('nuevoComentario');
+    if (!ta || typeof Tribute === 'undefined') return;
+    $.post('acciones_comentarios.php', { accion: 'obtenerMencionables', id_ticket: ID_TICKET }, function (res) {
+        var lista = (res && res.success && res.mencionables) ? res.mencionables : [];
+        var values = lista.map(function (m) {
+            var nombre = m.nombre || ('Empleado #' + m.noEmpleado);
+            return { key: nombre + (parseInt(m.es_bi) ? ' · BI' : ''), value: nombre, id: m.noEmpleado };
+        });
+        _embTribute = new Tribute({
+            values: values,
+            lookup: 'key',
+            fillAttr: 'value',
+            selectTemplate: function (item) { return '@' + item.original.value; },
+            menuItemTemplate: function (item) { return item.string; },
+            noMatchTemplate: function () { return null; }
+        });
+        _embTribute.attach(ta);
+        ta.addEventListener('tribute-replaced', function (e) {
+            var it = e.detail.item.original;
+            _embTokens.push({ id: it.id, token: '@' + it.value });
+        });
+    }, 'json');
+}
+
+/** noEmpleado mencionados cuyo "@Nombre" sigue presente en el texto. */
+function mencionadosEmbed(texto) {
+    var ids = [];
+    _embTokens.forEach(function (t) {
+        if (texto.indexOf(t.token) !== -1 && ids.indexOf(t.id) === -1) ids.push(t.id);
+    });
+    return ids;
+}
 
 function cargarTicket() {
     $.post('acciones_tickets.php', { accion: 'obtenerTicket', id: ID_TICKET }, function (res) {
@@ -220,6 +260,13 @@ function cargarComentarios() {
                 + '<div class="chat-bubble ' + cls + '">'
                 + '<div class="fw-600 fs-8 mb-1">' + escHtml(c.nombre_empleado || c.no_empleado) + '</div>'
                 + '<div>' + escHtml(c.comentario).replace(/\n/g,'<br>') + '</div>';
+            if (c.menciones && c.menciones.length) {
+                html += '<div class="mt-1">';
+                c.menciones.forEach(function (m) {
+                    html += '<span class="mencion-chip"><i class="fas fa-at"></i>' + escHtml(m.nombre) + '</span>';
+                });
+                html += '</div>';
+            }
             if (c.adjunto) {
                 html += '<div class="mt-2"><a href="uploads/' + escHtml(c.adjunto.ruta) + '" target="_blank" class="adjunto-chip">'
                     + '<i class="fas fa-paperclip"></i>' + escHtml(c.adjunto.nombre_archivo) + '</a></div>';
@@ -242,6 +289,7 @@ function enviarComentarioEmbed() {
     fd.append('id_ticket', ID_TICKET);
     fd.append('no_empleado', getCookie('noEmpleadoBI') || '');
     fd.append('comentario', texto);
+    mencionadosEmbed(texto).forEach(function (m) { fd.append('mencionados[]', m); });
     var adj = document.getElementById('adjuntoComentario');
     if (adj && adj.files[0]) fd.append('adjunto', adj.files[0]);
 
@@ -258,6 +306,7 @@ function enviarComentarioEmbed() {
             if (res.success) {
                 $('#nuevoComentario').val('');
                 if (adj) adj.value = '';
+                _embTokens = [];
                 cargarComentarios();
             } else {
                 Swal.fire({ icon: 'error', text: res.message || 'Error al enviar.', confirmButtonColor: messColor('accent') });

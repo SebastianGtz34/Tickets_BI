@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS tickets_comentarios (
     no_empleado VARCHAR(50)  NOT NULL,
     comentario  TEXT         NOT NULL,
     es_interno  TINYINT(1)   NOT NULL DEFAULT 0  COMMENT '0=público, 1=nota interna solo BI',
+    menciones   VARCHAR(255)             DEFAULT NULL  COMMENT 'CSV de noEmpleado @mencionados en el comentario',
     fecha       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_coment_ticket (id_ticket),

@@ -24,7 +24,7 @@ include 'encabezado.php';
             </ol>
         </nav>
     </div>
-    <a href="bandeja.php" class="btn btn-outline-secondary">
+    <a href="bandeja.php" class="btn btn-outline-mess-naranja">
         <i class="fas fa-arrow-left me-1"></i>Volver
     </a>
 </div>
@@ -69,7 +69,7 @@ include 'encabezado.php';
                 <div>
                     <label class="form-label fw-600 fs-7">Agregar comentario / nota</label>
                     <textarea class="form-control mb-2" id="nuevoComentario" rows="3"
-                              placeholder="Escribe tu comentario o nota interna…"></textarea>
+                              placeholder="Escribe tu comentario o nota interna… (usa @ para mencionar)"></textarea>
 
                     <div class="mb-2">
                         <input type="file" class="form-control form-control-sm" id="adjuntoComentario"
@@ -170,6 +170,7 @@ $(function () {
         cargarDetalleTicket();
     });
     cargarComentarios(ID_TICKET, true);
+    initMenciones(ID_TICKET);
 });
 
 function cargarEquipoBi(cb) {
