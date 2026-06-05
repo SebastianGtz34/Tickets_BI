@@ -210,6 +210,14 @@ function cargarComentarios(idTicket, esBi) {
                 + '<div class="fw-600 fs-8 mb-1">' + escHtml(c.nombre_empleado || c.no_empleado) + icon + '</div>'
                 + '<div>' + escHtml(c.comentario).replace(/\n/g, '<br>') + '</div>';
 
+            if (c.menciones && c.menciones.length) {
+                html += '<div class="mt-1">';
+                c.menciones.forEach(function (m) {
+                    html += '<span class="mencion-chip"><i class="fas fa-at"></i>' + escHtml(m.nombre) + '</span>';
+                });
+                html += '</div>';
+            }
+
             if (c.adjunto) {
                 html += '<div class="mt-2">'
                     + '<a href="uploads/' + escHtml(c.adjunto.ruta) + '" target="_blank" class="adjunto-chip">'
@@ -223,6 +231,44 @@ function cargarComentarios(idTicket, esBi) {
         contenedor.innerHTML = html;
         contenedor.scrollTop = contenedor.scrollHeight;
     });
+}
+
+/* ===== @Menciones inline en el textarea (Tribute.js) ===== */
+var _menciones = { tribute: null, tokens: [] };
+
+/** Activa el autocompletar "@" en #nuevoComentario con el directorio de empleados activos. */
+function initMenciones(idTicket) {
+    var ta = document.getElementById('nuevoComentario');
+    if (!ta || typeof Tribute === 'undefined') return;
+    ajaxPost('acciones_comentarios.php', { accion: 'obtenerMencionables', id_ticket: idTicket }, function (err, res) {
+        var lista = (!err && res && res.success && res.mencionables) ? res.mencionables : [];
+        var values = lista.map(function (m) {
+            var nombre = m.nombre || ('Empleado #' + m.noEmpleado);
+            return { key: nombre + (parseInt(m.es_bi) ? ' · BI' : ''), value: nombre, id: m.noEmpleado };
+        });
+        _menciones.tribute = new Tribute({
+            values: values,
+            lookup: 'key',
+            fillAttr: 'value',
+            selectTemplate: function (item) { return '@' + item.original.value; },
+            menuItemTemplate: function (item) { return item.string; },
+            noMatchTemplate: function () { return null; }
+        });
+        _menciones.tribute.attach(ta);
+        ta.addEventListener('tribute-replaced', function (e) {
+            var it = e.detail.item.original;
+            _menciones.tokens.push({ id: it.id, token: '@' + it.value });
+        });
+    });
+}
+
+/** noEmpleado mencionados cuyo "@Nombre" sigue presente en el texto al enviar. */
+function mencionadosDeTexto(texto) {
+    var ids = [];
+    _menciones.tokens.forEach(function (t) {
+        if (texto.indexOf(t.token) !== -1 && ids.indexOf(t.id) === -1) ids.push(t.id);
+    });
+    return ids;
 }
 
 /** Agregar comentario */
@@ -240,6 +286,7 @@ function agregarComentario(idTicket, esBi) {
     fd.append('no_empleado', getCookie('noEmpleadoBI') || '');
     fd.append('comentario', texto);
     fd.append('es_interno', (internoEl && internoEl.checked) ? 1 : 0);
+    mencionadosDeTexto(texto).forEach(function (m) { fd.append('mencionados[]', m); });
     if (adjuntoEl && adjuntoEl.files[0]) fd.append('adjunto', adjuntoEl.files[0]);
 
     var btn = document.getElementById('btnAgregarComentario');
@@ -258,6 +305,7 @@ function agregarComentario(idTicket, esBi) {
                 if (textoEl) textoEl.value = '';
                 if (internoEl) internoEl.checked = false;
                 if (adjuntoEl) adjuntoEl.value = '';
+                _menciones.tokens = [];
                 cargarComentarios(idTicket, esBi);
                 mostrarToast('Comentario agregado.', 'success');
             } else {

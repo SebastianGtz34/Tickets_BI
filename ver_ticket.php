@@ -24,7 +24,7 @@ include 'encabezado.php';
             </ol>
         </nav>
     </div>
-    <a href="mis_tickets.php" class="btn btn-outline-secondary">
+    <a href="mis_tickets.php" class="btn btn-outline-mess-naranja">
         <i class="fas fa-arrow-left me-1"></i>Volver
     </a>
 </div>
@@ -75,7 +75,7 @@ include 'encabezado.php';
                 <div>
                     <label class="form-label fw-600 fs-7">Agregar comentario</label>
                     <textarea class="form-control mb-2" id="nuevoComentario" rows="3"
-                              placeholder="Escribe tu comentario…"></textarea>
+                              placeholder="Escribe tu comentario… (usa @ para mencionar)"></textarea>
                     <div class="mb-2">
                         <input type="file" class="form-control form-control-sm" id="adjuntoComentario"
                                accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt">
@@ -129,6 +129,7 @@ var ID_TICKET = <?= $idTicket ?>;
 $(function () {
     cargarDetalleTicket();
     cargarComentarios(ID_TICKET, false);
+    initMenciones(ID_TICKET);
 });
 
 function cargarDetalleTicket() {

@@ -40,11 +40,34 @@ switch ($accion) {
             responder(false, 'Este ticket está cerrado. No se pueden agregar comentarios.');
         }
 
+        // Menciones (@usuario): validadas contra los mencionables del ticket (equipo BI + solicitante).
+        // El cliente nunca decide a quién se puede notificar — se filtra server-side.
+        $mencionadosRaw = $_POST['mencionados'] ?? [];
+        if (is_string($mencionadosRaw)) {
+            $mencionadosRaw = $mencionadosRaw === '' ? [] : explode(',', $mencionadosRaw);
+        }
+        $mencionadosRaw = array_values(array_unique(array_filter(array_map('intval', (array)$mencionadosRaw))));
+
+        $mencionadosValidos = [];
+        if ($mencionadosRaw) {
+            $permitidos = [];
+            foreach (tkMencionables($conn) as $mm) {
+                $permitidos[(int)$mm['noEmpleado']] = (int)$mm['es_bi'];
+            }
+            foreach ($mencionadosRaw as $mid) {
+                if ($mid === (int)$noEmpleado)          continue; // no auto-mención
+                if (!isset($permitidos[$mid]))          continue; // fuera del set permitido
+                if ($esInterno && $permitidos[$mid] !== 1) continue; // nota interna: solo a BI
+                $mencionadosValidos[] = $mid;
+            }
+        }
+        $mencionesCsv = $mencionadosValidos ? implode(',', $mencionadosValidos) : null;
+
         $stmt = $conn->prepare(
-            "INSERT INTO tickets_comentarios (id_ticket, no_empleado, comentario, es_interno)
-             VALUES (?, ?, ?, ?)"
+            "INSERT INTO tickets_comentarios (id_ticket, no_empleado, comentario, es_interno, menciones)
+             VALUES (?, ?, ?, ?, ?)"
         );
-        $stmt->bind_param('issi', $idTicket, $noEmpleado, $comentario, $esInterno);
+        $stmt->bind_param('issis', $idTicket, $noEmpleado, $comentario, $esInterno, $mencionesCsv);
         if (!$stmt->execute()) {
             responder(false, 'Error al guardar el comentario.');
         }
@@ -85,6 +108,11 @@ switch ($accion) {
         // Notificar al destinatario apropiado (solicitante o BI)
         tkNotificarComentario($conn, $idTicket, $idComentario, $comentario, (int)$noEmpleado, $esInterno === 1, $esBiSesion);
 
+        // Notificar a los @mencionados (además del flujo normal).
+        if ($mencionadosValidos) {
+            tkNotificarMencion($conn, $idTicket, $comentario, (int)$noEmpleado, $mencionadosValidos);
+        }
+
         responder(true, '', ['id' => $idComentario]);
     }
 
@@ -113,6 +141,7 @@ switch ($accion) {
         $res = $stmt->get_result();
 
         $comentarios = [];
+        $todasMenc   = [];
         while ($row = $res->fetch_assoc()) {
             $adjunto = null;
             if ($row['nombre_archivo']) {
@@ -122,14 +151,58 @@ switch ($accion) {
                     'tamano'         => $row['tamano'],
                 ];
             }
+            // Menciones: CSV de noEmpleado → se resuelven nombres más abajo.
+            $mencIds = [];
+            if (!empty($row['menciones'])) {
+                $mencIds = array_values(array_filter(array_map('intval', explode(',', $row['menciones']))));
+                foreach ($mencIds as $mi) $todasMenc[$mi] = true;
+            }
             // nombre_empleado ya viene del JOIN con mess_rrhh.usuarios
-            $row['adjunto']         = $adjunto;
-            unset($row['nombre_archivo'], $row['ruta'], $row['tamano']);
+            $row['adjunto']  = $adjunto;
+            $row['_mencIds'] = $mencIds;
+            unset($row['nombre_archivo'], $row['ruta'], $row['tamano'], $row['menciones']);
             $comentarios[] = $row;
         }
         $stmt->close();
 
+        // Resolver nombres de todos los mencionados en una sola consulta.
+        $nombresMenc = [];
+        if ($todasMenc) {
+            $ids = array_keys($todasMenc);
+            $ph  = implode(',', array_fill(0, count($ids), '?'));
+            $st  = $conn->prepare("SELECT noEmpleado, nombre FROM mess_rrhh.usuarios WHERE noEmpleado IN ($ph)");
+            $st->bind_param(str_repeat('i', count($ids)), ...$ids);
+            $st->execute();
+            $rr = $st->get_result();
+            while ($u = $rr->fetch_assoc()) $nombresMenc[(int)$u['noEmpleado']] = $u['nombre'];
+            $st->close();
+        }
+
+        foreach ($comentarios as &$c) {
+            $arr = [];
+            foreach ($c['_mencIds'] as $mi) {
+                $arr[] = ['no_empleado' => $mi, 'nombre' => $nombresMenc[$mi] ?? ('Empleado #' . $mi)];
+            }
+            $c['menciones'] = $arr;
+            unset($c['_mencIds']);
+        }
+        unset($c);
+
         responder(true, '', ['comentarios' => $comentarios]);
+    }
+
+    // ── OBTENER MENCIONABLES ───────────────────────────────────────────────────
+    // Usuarios que el actual puede @mencionar en este ticket: equipo BI + solicitante.
+    // Solo requiere sesión (los usuarios fuera del depto 32 también pueden mencionar).
+    case 'obtenerMencionables': {
+        $idTicket = (int)($_POST['id_ticket'] ?? 0);
+        if (!$idTicket) responder(false, 'ID de ticket inválido.');
+
+        $lista = tkMencionables($conn);
+        // Excluir al propio usuario de la sesión (no se menciona a sí mismo).
+        $lista = array_values(array_filter($lista, fn($m) => (int)$m['noEmpleado'] !== (int)$noEmpSesion));
+
+        responder(true, '', ['mencionables' => $lista]);
     }
 
     default:
