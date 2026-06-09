@@ -21,11 +21,11 @@ function responder(bool $success, string $message = '', array $extra = []): void
 
 function generarFolio(mysqli $conn): string {
     $anio = date('Y');
-    $sql  = "SELECT COUNT(*) AS total FROM tickets WHERE YEAR(fecha_creacion) = ?";
+    $sql  = "SELECT MAX(id) AS id FROM tickets WHERE YEAR(fecha_creacion) = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param('i', $anio);
     $stmt->execute();
-    $n = (int)$stmt->get_result()->fetch_assoc()['total'] + 1;
+    $n = (int)$stmt->get_result()->fetch_assoc()['id'] + 1;
     $stmt->close();
     return sprintf('TKT-%d-%03d', $anio, $n);
 }
