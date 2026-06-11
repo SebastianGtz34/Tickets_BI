@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS tickets (
     link                      VARCHAR(500)  NULL,
     id_categoria              INT UNSIGNED,
     prioridad                 ENUM('baja','media','alta','urgente') NOT NULL DEFAULT 'media',
-    estado                    ENUM('nuevo','en_proceso','pendiente','resuelto','cerrado') NOT NULL DEFAULT 'nuevo',
+    estado                    ENUM('nuevo','en_proceso','pendiente','resuelto','cerrado','cancelado') NOT NULL DEFAULT 'nuevo',
     no_empleado_solicitante   VARCHAR(50)   NOT NULL,
     fecha_creacion            DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

@@ -64,7 +64,7 @@ include 'encabezado.php';
                 </div>
                 <hr>
                 <div id="avisoTicketCerrado" class="alert alert-secondary py-2 px-3 mb-2 fs-7 d-none">
-                    <i class="fas fa-lock me-1"></i>Este ticket está cerrado. Los comentarios están deshabilitados.
+                    <i class="fas fa-lock me-1"></i>Este ticket está cerrado o cancelado. Los comentarios están deshabilitados.
                 </div>
                 <div>
                     <label class="form-label fw-600 fs-7">Agregar comentario / nota</label>
@@ -142,6 +142,9 @@ include 'encabezado.php';
                     </button>
                     <button class="btn btn-danger btn-sm" onclick="cerrarTicket()">
                         <i class="fas fa-times-circle me-1"></i>Cerrar Ticket
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="cancelarTicket()">
+                        <i class="fas fa-ban me-1"></i>Cancelar Ticket
                     </button>
                 </div>
             </div>
@@ -225,10 +228,10 @@ function cargarDetalleTicket() {
         var ids = (t.asignados || []).map(function (a) { return String(a.no_empleado); });
         $('#selAsignar').val(ids).trigger('change');
 
-        // Ticket cerrado: bloquear comentarios
-        var cerrado = (t.estado === 'cerrado');
-        $('#nuevoComentario, #adjuntoComentario, #esInterno, #btnAgregarComentario').prop('disabled', cerrado);
-        $('#avisoTicketCerrado').toggleClass('d-none', !cerrado);
+        // Ticket en estado terminal (cerrado o cancelado): bloquear comentarios
+        var terminal = (t.estado === 'cerrado' || t.estado === 'cancelado');
+        $('#nuevoComentario, #adjuntoComentario, #esInterno, #btnAgregarComentario').prop('disabled', terminal);
+        $('#avisoTicketCerrado').toggleClass('d-none', !terminal);
 
         if (res.adjuntos && res.adjuntos.length > 0) {
             var html = '';
@@ -256,6 +259,25 @@ function cambiarEstado(nuevoEstado) {
         } else {
             mostrarAlerta('error', res.message || 'Error al actualizar estado.');
         }
+    });
+}
+
+function cancelarTicket() {
+    confirmarAccion('El ticket se marcará como CANCELADO. Es un estado terminal: se cerrará y no podrá reabrirse.', function () {
+        ajaxPost('acciones_tickets.php', {
+            accion: 'actualizarEstado',
+            id: ID_TICKET,
+            estado: 'cancelado',
+            no_empleado: getCookie('noEmpleadoBI')
+        }, function (err, res) {
+            if (err || !res) { mostrarAlerta('error', 'Error de comunicación.'); return; }
+            if (res.success) {
+                mostrarToast('Ticket cancelado.', 'warning');
+                cargarDetalleTicket();
+            } else {
+                mostrarAlerta('error', res.message || 'Error al cancelar el ticket.');
+            }
+        });
     });
 }
 

@@ -8,17 +8,15 @@ function getCookie(name) {
     return cookies.get(name) || undefined;
 }
 
-/** Alerta SweetAlert2 */
+/**
+ * Feedback de resultado homologado: un solo formato (toast abajo-derecha).
+ * Se conserva la firma mostrarAlerta(tipo, mensaje) para no tocar los call sites,
+ * pero internamente delega en mostrarToast. Las confirmaciones que requieren
+ * decisión del usuario siguen usando confirmarAccion (SweetAlert).
+ */
 function mostrarAlerta(tipo, mensaje) {
-    Swal.fire({
-        icon: tipo,
-        text: mensaje,
-        confirmButtonColor: messColor('accent'),
-        background: messColor('card-bg'),
-        color: messColor('text'),
-        timer: tipo === 'success' ? 2000 : undefined,
-        timerProgressBar: tipo === 'success'
-    });
+    var map = { error: 'danger', success: 'success', warning: 'warning', info: 'info' };
+    mostrarToast(mensaje, map[tipo] || 'primary');
 }
 
 /** Toast Bootstrap 5 */
@@ -70,7 +68,8 @@ function obtenerBadgeEstado(estado) {
         en_proceso: ['badge-en_proceso', 'En Proceso'],
         pendiente:  ['badge-pendiente',  'Pendiente'],
         resuelto:   ['badge-resuelto',   'Resuelto'],
-        cerrado:    ['badge-cerrado',    'Cerrado']
+        cerrado:    ['badge-cerrado',    'Cerrado'],
+        cancelado:  ['badge-cancelado',  'Cancelado']
     };
     var data = map[estado] || ['bg-secondary', estado];
     return '<span class="badge ' + data[0] + '">' + data[1] + '</span>';

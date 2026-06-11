@@ -68,7 +68,7 @@ include 'encabezado.php';
                 <hr>
 
                 <div id="avisoTicketCerrado" class="alert alert-secondary py-2 px-3 mb-2 fs-7 d-none">
-                    <i class="fas fa-lock me-1"></i>Este ticket está cerrado. Los comentarios están deshabilitados.
+                    <i class="fas fa-lock me-1"></i>Este ticket está cerrado o cancelado. Los comentarios están deshabilitados.
                 </div>
 
                 <!-- Formulario comentario -->
@@ -162,10 +162,10 @@ function cargarDetalleTicket() {
         $('#metaFecha').text(formatearFecha(t.fecha_creacion));
         $('#metaActualizado').text(formatearFecha(t.fecha_actualizacion));
 
-        // Ticket cerrado: bloquear comentarios
-        var cerrado = (t.estado === 'cerrado');
-        $('#nuevoComentario, #adjuntoComentario, #btnAgregarComentario').prop('disabled', cerrado);
-        $('#avisoTicketCerrado').toggleClass('d-none', !cerrado);
+        // Ticket en estado terminal (cerrado o cancelado): bloquear comentarios
+        var terminal = (t.estado === 'cerrado' || t.estado === 'cancelado');
+        $('#nuevoComentario, #adjuntoComentario, #btnAgregarComentario').prop('disabled', terminal);
+        $('#avisoTicketCerrado').toggleClass('d-none', !terminal);
 
         if (res.adjuntos && res.adjuntos.length > 0) {
             var html = '';
