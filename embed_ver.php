@@ -67,7 +67,7 @@ if (!$idTicket) {
                 </div>
                 <hr>
                 <div id="avisoTicketCerrado" class="alert alert-secondary py-2 px-3 mb-2 fs-7 d-none">
-                    <i class="fas fa-lock me-1"></i>Este ticket está cerrado. Los comentarios están deshabilitados.
+                    <i class="fas fa-lock me-1"></i>Este ticket está cerrado o cancelado. Los comentarios están deshabilitados.
                 </div>
                 <div>
                     <label class="form-label fw-600 fs-7">Agregar comentario</label>
@@ -133,8 +133,30 @@ function messColor(token) {
     var v = getComputedStyle(document.body).getPropertyValue('--' + token);
     return (v || '').trim();
 }
+/* Toast homologado (mismo formato que el resto del sistema) */
+function mostrarToast(mensaje, tipo) {
+    tipo = tipo || 'primary';
+    var id = 'toast_' + Date.now();
+    var bgMap = { success:'bg-success', danger:'bg-danger', warning:'bg-warning text-dark', info:'bg-info', primary:'bg-primary' };
+    var bg = bgMap[tipo] || 'bg-primary';
+    var html = '<div id="' + id + '" class="toast align-items-center text-white ' + bg + ' border-0" role="alert" aria-live="assertive" aria-atomic="true">'
+        + '<div class="d-flex"><div class="toast-body">' + mensaje + '</div>'
+        + '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>';
+    var container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
+    }
+    container.insertAdjacentHTML('beforeend', html);
+    var toastEl = new bootstrap.Toast(document.getElementById(id), { delay: 3500 });
+    toastEl.show();
+    document.getElementById(id).addEventListener('hidden.bs.toast', function () { this.remove(); });
+}
 function badgeEstado(estado) {
-    var map = { nuevo:['badge-nuevo','Nuevo'], en_proceso:['badge-en_proceso','En Proceso'], pendiente:['badge-pendiente','Pendiente'], resuelto:['badge-resuelto','Resuelto'], cerrado:['badge-cerrado','Cerrado'] };
+    var map = { nuevo:['badge-nuevo','Nuevo'], en_proceso:['badge-en_proceso','En Proceso'], pendiente:['badge-pendiente','Pendiente'], resuelto:['badge-resuelto','Resuelto'], cerrado:['badge-cerrado','Cerrado'], cancelado:['badge-cancelado','Cancelado'] };
     var d = map[estado] || ['bg-secondary', estado];
     return '<span class="badge ' + d[0] + '">' + d[1] + '</span>';
 }
@@ -203,7 +225,7 @@ function mencionadosEmbed(texto) {
 function cargarTicket() {
     $.post('acciones_tickets.php', { accion: 'obtenerTicket', id: ID_TICKET }, function (res) {
         if (!res || !res.success) {
-            Swal.fire({ icon: 'error', text: 'No se pudo cargar el ticket.', confirmButtonColor: messColor('accent') });
+            mostrarToast('No se pudo cargar el ticket.', 'danger');
             return;
         }
         var t = res.ticket;
@@ -224,10 +246,10 @@ function cargarTicket() {
         $('#metaFecha').text(formatearFecha(t.fecha_creacion));
         $('#metaActualizado').text(formatearFecha(t.fecha_actualizacion));
 
-        // Ticket cerrado: bloquear comentarios
-        var cerrado = (t.estado === 'cerrado');
-        $('#nuevoComentario, #adjuntoComentario, #btnAgregarComentario').prop('disabled', cerrado);
-        $('#avisoTicketCerrado').toggleClass('d-none', !cerrado);
+        // Ticket en estado terminal (cerrado o cancelado): bloquear comentarios
+        var terminal = (t.estado === 'cerrado' || t.estado === 'cancelado');
+        $('#nuevoComentario, #adjuntoComentario, #btnAgregarComentario').prop('disabled', terminal);
+        $('#avisoTicketCerrado').toggleClass('d-none', !terminal);
 
         if (res.adjuntos && res.adjuntos.length > 0) {
             var html = '';
@@ -281,7 +303,7 @@ function cargarComentarios() {
 function enviarComentarioEmbed() {
     var texto = $('#nuevoComentario').val().trim();
     if (!texto) {
-        Swal.fire({ icon: 'warning', text: 'Escribe un comentario primero.', confirmButtonColor: messColor('accent') });
+        mostrarToast('Escribe un comentario primero.', 'warning');
         return;
     }
     var fd = new FormData();
@@ -308,14 +330,15 @@ function enviarComentarioEmbed() {
                 if (adj) adj.value = '';
                 _embTokens = [];
                 cargarComentarios();
+                mostrarToast('Comentario agregado.', 'success');
             } else {
-                Swal.fire({ icon: 'error', text: res.message || 'Error al enviar.', confirmButtonColor: messColor('accent') });
+                mostrarToast(res.message || 'Error al enviar.', 'danger');
             }
         },
         error: function () {
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Enviar';
-            Swal.fire({ icon: 'error', text: 'Error de comunicación.', confirmButtonColor: messColor('accent') });
+            mostrarToast('Error de comunicación.', 'danger');
         }
     });
 }

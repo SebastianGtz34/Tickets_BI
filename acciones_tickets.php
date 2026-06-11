@@ -298,14 +298,20 @@ switch ($accion) {
         requiereBiJson($conn, $noEmpSesion);
         $id     = (int)($_POST['id'] ?? 0);
         $estado = $_POST['estado'] ?? '';
-        $validos = ['nuevo','en_proceso','pendiente','resuelto','cerrado'];
+        $validos = ['nuevo','en_proceso','pendiente','resuelto','cerrado','cancelado'];
         if (!$id || !in_array($estado, $validos, true)) responder(false, 'Datos inválidos.');
 
-        // fecha_resuelto: se sella al pasar a 'resuelto' (base del auto-cierre a 3 días)
-        // y se limpia si el ticket regresa a cualquier otro estado abierto.
+        // Sellado de fechas según el estado destino:
+        //  - 'resuelto'  → sella fecha_resuelto (base del auto-cierre a 3 días).
+        //  - 'cancelado' → estado terminal: sella fecha_cierre y limpia fecha_resuelto.
+        //  - cualquier otro estado abierto → limpia fecha_resuelto.
         if ($estado === 'resuelto') {
             $stmt = $conn->prepare(
                 "UPDATE tickets SET estado = ?, fecha_resuelto = NOW(), fecha_actualizacion = NOW() WHERE id = ?"
+            );
+        } elseif ($estado === 'cancelado') {
+            $stmt = $conn->prepare(
+                "UPDATE tickets SET estado = ?, fecha_resuelto = NULL, fecha_cierre = NOW(), fecha_actualizacion = NOW() WHERE id = ?"
             );
         } else {
             $stmt = $conn->prepare(
@@ -473,7 +479,9 @@ switch ($accion) {
                 SUM(estado='en_proceso') en_proceso,
                 SUM(estado='resuelto') resueltos,
                 SUM(estado='cerrado') cerrados,
-                ROUND(AVG(CASE WHEN fecha_cierre IS NOT NULL THEN DATEDIFF(fecha_cierre,fecha_creacion) END),1) promedio_dias
+                SUM(estado='cancelado') cancelados,
+                ROUND(AVG(CASE WHEN fecha_cierre   IS NOT NULL THEN DATEDIFF(fecha_cierre,  fecha_creacion) END),1) promedio_cierre,
+                ROUND(AVG(CASE WHEN fecha_resuelto IS NOT NULL THEN DATEDIFF(fecha_resuelto,fecha_creacion) END),1) promedio_resolucion
             $base",
             $types, $params
         );

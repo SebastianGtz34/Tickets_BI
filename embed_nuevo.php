@@ -133,6 +133,28 @@ function getCookie(name) {
     const cookies = new URLSearchParams(document.cookie.replace(/; /g, '&'));
     return cookies.get(name) || undefined;
 }
+/* Toast homologado (mismo formato que el resto del sistema) */
+function mostrarToast(mensaje, tipo) {
+    tipo = tipo || 'primary';
+    var id = 'toast_' + Date.now();
+    var bgMap = { success:'bg-success', danger:'bg-danger', warning:'bg-warning text-dark', info:'bg-info', primary:'bg-primary' };
+    var bg = bgMap[tipo] || 'bg-primary';
+    var html = '<div id="' + id + '" class="toast align-items-center text-white ' + bg + ' border-0" role="alert" aria-live="assertive" aria-atomic="true">'
+        + '<div class="d-flex"><div class="toast-body">' + mensaje + '</div>'
+        + '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>';
+    var container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
+    }
+    container.insertAdjacentHTML('beforeend', html);
+    var toastEl = new bootstrap.Toast(document.getElementById(id), { delay: 3500 });
+    toastEl.show();
+    document.getElementById(id).addEventListener('hidden.bs.toast', function () { this.remove(); });
+}
 
 var KPI_ID = null;
 
@@ -247,26 +269,19 @@ function enviarTicketEmbedConfirmado() {
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Enviar Ticket';
             if (res.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Ticket creado',
-                    text: 'Folio: ' + res.folio,
-                    confirmButtonColor: messColor('accent'),
-                    timer: 2200, timerProgressBar: true
-                }).then(function () {
-                    form.reset();
-                    form.classList.remove('was-validated');
-                    $('#id_categoria').val('').trigger('change');
-                    toggleKpiCampos();
-                });
+                mostrarToast('Ticket creado. Folio: ' + res.folio, 'success');
+                form.reset();
+                form.classList.remove('was-validated');
+                $('#id_categoria').val('').trigger('change');
+                toggleKpiCampos();
             } else {
-                Swal.fire({ icon: 'error', text: res.message || 'Error al crear el ticket.', confirmButtonColor: messColor('accent') });
+                mostrarToast(res.message || 'Error al crear el ticket.', 'danger');
             }
         },
         error: function () {
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Enviar Ticket';
-            Swal.fire({ icon: 'error', text: 'Error de comunicación.', confirmButtonColor: messColor('accent') });
+            mostrarToast('Error de comunicación.', 'danger');
         }
     });
 }

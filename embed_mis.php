@@ -35,6 +35,7 @@ $noEmpSesion = requiereSesionPage();
                     <option value="pendiente">Pendiente</option>
                     <option value="resuelto">Resuelto</option>
                     <option value="cerrado">Cerrado</option>
+                    <option value="cancelado">Cancelado</option>
                 </select>
             </div>
             <div class="col-6 col-md-3">
@@ -96,7 +97,7 @@ function badgeEstado(estado) {
     var map = {
         nuevo:['badge-nuevo','Nuevo'], en_proceso:['badge-en_proceso','En Proceso'],
         pendiente:['badge-pendiente','Pendiente'], resuelto:['badge-resuelto','Resuelto'],
-        cerrado:['badge-cerrado','Cerrado']
+        cerrado:['badge-cerrado','Cerrado'], cancelado:['badge-cancelado','Cancelado']
     };
     var d = map[estado] || ['bg-secondary', estado];
     return '<span class="badge ' + d[0] + '">' + d[1] + '</span>';

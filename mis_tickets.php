@@ -36,6 +36,7 @@ include 'encabezado.php';
                     <option value="pendiente">Pendiente</option>
                     <option value="resuelto">Resuelto</option>
                     <option value="cerrado">Cerrado</option>
+                    <option value="cancelado">Cancelado</option>
                 </select>
             </div>
             <div class="col-6 col-md-3">

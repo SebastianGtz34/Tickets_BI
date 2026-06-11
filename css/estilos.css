@@ -429,6 +429,7 @@ body.theme-dark .sidebar {
 .badge-pendiente  { background-color: var(--warning); color: #212529; }
 .badge-resuelto   { background-color: var(--success); color: #fff; }
 .badge-cerrado    { background-color: var(--text-muted); color: #fff; }
+.badge-cancelado  { background-color: var(--danger); color: #fff; opacity: .85; }
 
 .badge-baja    { background-color: #a8d5ba; color: #1a3c2a; }
 .badge-media   { background-color: var(--info);    color: #fff; }

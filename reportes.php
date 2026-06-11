@@ -49,7 +49,7 @@ include 'encabezado.php';
 
 <!-- KPIs -->
 <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4 col-xl">
         <div class="card stat-card border-left-primary text-center">
             <div class="card-body">
                 <div class="stat-label">Total</div>
@@ -57,7 +57,7 @@ include 'encabezado.php';
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4 col-xl">
         <div class="card stat-card border-left-success text-center">
             <div class="card-body">
                 <div class="stat-label">Resueltos</div>
@@ -65,7 +65,7 @@ include 'encabezado.php';
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4 col-xl">
         <div class="card stat-card border-left-danger text-center">
             <div class="card-body">
                 <div class="stat-label">Abiertos</div>
@@ -73,11 +73,19 @@ include 'encabezado.php';
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4 col-xl">
         <div class="card stat-card border-left-info text-center">
             <div class="card-body">
+                <div class="stat-label">T. Promedio Resolución</div>
+                <div class="stat-value fs-5" id="rPromedioResol">—</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="card stat-card border-left-warning text-center">
+            <div class="card-body">
                 <div class="stat-label">T. Promedio Cierre</div>
-                <div class="stat-value fs-5" id="rPromedio">—</div>
+                <div class="stat-value fs-5" id="rPromedioCierre">—</div>
             </div>
         </div>
     </div>
@@ -155,8 +163,9 @@ function generarReporte() {
         var d = res.datos;
         $('#rTotal').text(d.total || 0);
         $('#rResueltos').text(d.resueltos || 0);
-        $('#rAbiertos').text((d.total - d.resueltos - d.cerrados) || 0);
-        $('#rPromedio').text(d.promedio_dias ? d.promedio_dias + ' días' : '—');
+        $('#rAbiertos').text((d.total - d.resueltos - d.cerrados - d.cancelados) || 0);
+        $('#rPromedioResol').text(d.promedio_resolucion ? d.promedio_resolucion + ' días' : '—');
+        $('#rPromedioCierre').text(d.promedio_cierre ? d.promedio_cierre + ' días' : '—');
 
         renderChart('gMeses',      'bar', d.meses.map(function (m)      { return m.mes; }),      d.meses.map(function (m)      { return m.total; }), 'Tickets por Mes', messRgba('accent', 0.7));
         renderChart('gCategorias', 'bar', d.categorias.map(function (c) { return c.nombre; }),  d.categorias.map(function (c) { return c.total; }), 'Por Categoría',   messRgba('info', 0.7));
