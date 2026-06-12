@@ -1,23 +1,23 @@
 <?php
 /**
- * Notificaciones de Tickets BI.
+ * Notificaciones de Tickets BI/TI.
  *
  * Escribe en mess_rrhh.notificacion_historial con sistema = 'ticketsBI'.
  *
- * Receptores del lado BI:
+ * Receptores del lado BI/TI:
  *   - Si el ticket tiene ingenieros asignados (1..3): a esos.
- *   - Si no hay asignados: todo el equipo BI (mess_rrhh.usuarios
- *     WHERE departamento = 32 AND estatus = 1).
+ *   - Si no hay asignados: todo el equipo BI+TI (mess_rrhh.usuarios
+ *     WHERE departamento IN (32, 38) AND estatus = 1).
  *
  * Eventos dirigidos al solicitante:
- *   - CambioEstadoTicket     → cuando BI mueve el estado.
- *   - AsignacionIngeniero    → cuando BI asigna o reasigna.
- *   - ComentarioBI           → cuando BI agrega comentario público.
+ *   - CambioEstadoTicket     → cuando BI/TI mueve el estado.
+ *   - AsignacionIngeniero    → cuando BI/TI asigna o reasigna.
+ *   - ComentarioBI           → cuando BI/TI agrega comentario público.
  *
- * Eventos dirigidos al equipo BI:
+ * Eventos dirigidos al equipo BI/TI:
  *   - NuevoTicket            → al crearse.
  *   - ComentarioUsuario      → cuando el solicitante comenta.
- *   - NotaInternaTicket      → cuando BI marca una nota interna (solo entre BI).
+ *   - NotaInternaTicket      → cuando BI/TI marca una nota interna (solo entre BI/TI).
  *   - TicketEstancado        → cron: >= 3 días sin cambio de estado.
  *   - TicketSinAsignar       → cron: >= 2 días sin ingeniero asignado.
  *
@@ -27,11 +27,11 @@
 
 if (!function_exists('tkNotifEquipoBi')) {
 
-    /** Lista de noEmpleado del equipo BI (usuarios activos del depto 32). */
+    /** Lista de noEmpleado del equipo BI+TI (usuarios activos de deptos 32, 38). */
     function tkNotifEquipoBi(mysqli $conn): array {
         $res = $conn->query(
             "SELECT noEmpleado FROM mess_rrhh.usuarios
-             WHERE departamento = 32 AND estatus = 1"
+             WHERE departamento IN (32, 38) AND estatus = 1"
         );
         $ids = [];
         if ($res) {
@@ -62,7 +62,7 @@ if (!function_exists('tkNotifEquipoBi')) {
 
     /**
      * Usuarios que se pueden @mencionar: cualquier empleado activo de mess_rrhh.
-     * Marca es_bi=1 si pertenece al equipo BI (depto 32) para decidir la pantalla
+     * Marca es_bi=1 si pertenece al equipo BI/TI (deptos 32, 38) para decidir la pantalla
      * destino de la notificación y la restricción de notas internas.
      * Devuelve [{noEmpleado:int, nombre:string, es_bi:int}, …].
      */
@@ -79,7 +79,7 @@ if (!function_exists('tkNotifEquipoBi')) {
                 $out[] = [
                     'noEmpleado' => $id,
                     'nombre'     => $r['nombre'] ?: ('Empleado #' . $id),
-                    'es_bi'      => ((int)$r['departamento'] === 32) ? 1 : 0,
+                    'es_bi'      => in_array((int)$r['departamento'], [32, 38]) ? 1 : 0,
                 ];
             }
         }

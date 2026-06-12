@@ -67,9 +67,10 @@ include 'encabezado.php';
                         <label for="catTipo" class="form-label fw-600">Tipo <span class="text-danger">*</span></label>
                         <select class="form-select" id="catTipo" name="tipo" required>
                             <option value="sistema">Sistema MESS</option>
+                            <option value="ti">Departamento TI</option>
                             <option value="otro">Otro alcance</option>
                         </select>
-                        <div class="form-text">"Sistema MESS" para módulos internos (Control Vehicular, Incidencias…); "Otro" para alcances como KPIs, Messen Academy, Sitio Web, etc.</div>
+                        <div class="form-text">"Sistema MESS" para módulos internos (Control Vehicular, Incidencias…); "Departamento TI" para solicitudes del área TI; "Otro" para alcances como KPIs, Messen Academy, Sitio Web, etc.</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -106,7 +107,7 @@ function cargarCatalogo() {
                 : '<span class="badge bg-secondary">Inactivo</span>';
             var tipoHtml = c.tipo === 'sistema'
                 ? '<span class="badge bg-primary">Sistema MESS</span>'
-                : '<span class="badge bg-secondary">Otro</span>';
+                : (c.tipo === 'ti' ? '<span class="badge bg-info">Departamento TI</span>' : '<span class="badge bg-secondary">Otro</span>');
             var btnToggle = c.activo == 1
                 ? '<button class="btn btn-sm btn-outline-warning" onclick="toggleCategoria(' + c.id + ', 0)"><i class="fas fa-ban me-1"></i>Desactivar</button>'
                 : '<button class="btn btn-sm btn-outline-success" onclick="toggleCategoria(' + c.id + ', 1)"><i class="fas fa-check me-1"></i>Activar</button>';
@@ -138,7 +139,7 @@ function abrirModalEditar(id, nombre, tipo) {
     document.getElementById('formCategoria').classList.remove('was-validated');
     document.getElementById('catId').value = id;
     document.getElementById('catNombre').value = nombre;
-    document.getElementById('catTipo').value = (tipo === 'sistema') ? 'sistema' : 'otro';
+    document.getElementById('catTipo').value = (tipo === 'sistema' || tipo === 'ti') ? tipo : 'otro';
     document.getElementById('modalCategoriaLabel').textContent = 'Editar Categoría';
     var modal = new bootstrap.Modal(document.getElementById('modalCategoria'));
     modal.show();

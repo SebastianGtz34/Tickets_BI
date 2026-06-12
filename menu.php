@@ -10,11 +10,11 @@
         return $pagina === $actual ? ' active' : '';
     }
 
-    // Equipo BI = usuarios activos del departamento 32 (cambio 2026-05-25).
+    // Equipo BI/TI = usuarios activos de departamentos 32 y 38 (cambio 2026-06-12).
     $esEquipoBi = false;
     $stmtAcc = $conn->prepare(
         "SELECT 1 FROM mess_rrhh.usuarios
-         WHERE noEmpleado = ? AND departamento = 32 AND estatus = 1 LIMIT 1"
+         WHERE noEmpleado = ? AND departamento IN (32, 38) AND estatus = 1 LIMIT 1"
     );
     if ($stmtAcc) {
         $noEmpMenu = intval($_COOKIE['noEmpleadoBI']);
@@ -60,7 +60,7 @@
 
     <?php if ($esEquipoBi): ?>
     <hr class="sidebar-divider">
-    <div class="sidebar-heading">Equipo BI</div>
+    <div class="sidebar-heading">Equipo BI/TI</div>
 
     <!-- Menú Bandeja -->
     <li class="nav-item<?= menuActivo('bandeja.php', $paginaActual) ?>">

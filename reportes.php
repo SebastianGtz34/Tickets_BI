@@ -38,6 +38,14 @@ include 'encabezado.php';
                     <option value="">Todas</option>
                 </select>
             </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label mb-1 fs-7 fw-600">Departamento</label>
+                <select class="form-select form-select-sm" id="filtroDepartamento">
+                    <option value="">Todos</option>
+                    <option value="32">BI</option>
+                    <option value="38">TI</option>
+                </select>
+            </div>
             <div class="col-auto">
                 <button class="btn btn-primary btn-sm" id="btnGenerar">
                     <i class="fas fa-sync-alt me-1"></i>Generar
@@ -151,9 +159,10 @@ $(function () {
 });
 
 function generarReporte() {
+    var depto = $('#filtroDepartamento').val();
     ajaxPost('acciones_tickets.php', {
         accion: 'obtenerEstadisticas',
-        es_bi: 1,
+        departamento: depto || '',
         fecha_desde: $('#filtroDesde').val(),
         fecha_hasta: $('#filtroHasta').val(),
         id_categoria: $('#filtroCategoria').val(),

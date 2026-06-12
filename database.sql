@@ -15,8 +15,8 @@ USE mess_tickets_bi;
 CREATE TABLE IF NOT EXISTS tickets_categorias (
     id     INT UNSIGNED  NOT NULL AUTO_INCREMENT,
     nombre VARCHAR(100)  NOT NULL,
-    tipo   ENUM('sistema','otro') NOT NULL DEFAULT 'otro'
-           COMMENT 'sistema = módulo interno MESS; otro = otros alcances (KPIs, academy, sitio web, etc.)',
+    tipo   ENUM('sistema','otro','ti') NOT NULL DEFAULT 'otro'
+           COMMENT 'sistema = módulo MESS; ti = departamento TI; otro = otros alcances (KPIs, academy, sitio web, etc.)',
     activo TINYINT(1)    NOT NULL DEFAULT 1,
     PRIMARY KEY (id),
     UNIQUE KEY uq_cat_nombre (nombre)
@@ -35,6 +35,8 @@ INSERT INTO tickets_categorias (nombre, tipo, activo) VALUES
     ('Capacitación',       'otro',    1),
     ('Activos',            'sistema', 1),
     ('Entrada de Equipos', 'sistema', 1),
+    ('Soporte Técnico',    'ti',      1),
+    ('Mantenimiento',      'ti',      1),
     ('Otro / General',     'otro',    1),
     ('Facturación',        'otro',    1),
     ('Messen Academy',     'otro',    1),

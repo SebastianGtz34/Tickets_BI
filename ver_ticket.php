@@ -155,7 +155,17 @@ function cargarDetalleTicket() {
         $('#metaFolio').text(t.folio);
         $('#metaEstado').html(obtenerBadgeEstado(t.estado));
         $('#metaPrioridad').html(obtenerBadgePrioridad(t.prioridad));
-        $('#metaCategoria').text(t.categoria || '—');
+
+        // Mostrar categoría con color por tipo
+        if (t.categoria) {
+            var color = getColorPorTipo(t.categoria_tipo);
+            var badgeHtml = '<span style="background: ' + color + '26; color: ' + color + '; padding: 4px 8px; border-radius: 4px; font-weight: 500;">'
+                          + escHtml(t.categoria) + '</span>';
+            $('#metaCategoria').html(badgeHtml);
+        } else {
+            $('#metaCategoria').text('—');
+        }
+
         $('#metaSolicitante').text(t.nombre_solicitante || t.no_empleado_solicitante || '—');
         var nombresAsig = (t.asignados || []).map(function (a) { return a.nombre || ('Empleado #' + a.no_empleado); });
         $('#metaAsignado').text(nombresAsig.length ? nombresAsig.join(', ') : 'Sin asignar');
