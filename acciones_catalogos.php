@@ -34,7 +34,7 @@ switch ($accion) {
     // ── CREAR CATEGORÍA ───────────────────────────────────────────────────────
     case 'crearCategoria': {
         $nombre = trim($_POST['nombre'] ?? '');
-        $tipo   = ($_POST['tipo'] ?? 'otro') === 'sistema' ? 'sistema' : 'otro';
+        $tipo   = in_array($_POST['tipo'] ?? '', ['sistema', 'ti'], true) ? $_POST['tipo'] : 'otro';
 
         if (!$nombre) responder(false, 'El nombre es obligatorio.');
 
@@ -62,7 +62,7 @@ switch ($accion) {
     case 'actualizarCategoria': {
         $id     = (int)($_POST['id'] ?? 0);
         $nombre = trim($_POST['nombre'] ?? '');
-        $tipo   = ($_POST['tipo'] ?? 'otro') === 'sistema' ? 'sistema' : 'otro';
+        $tipo   = in_array($_POST['tipo'] ?? '', ['sistema', 'ti'], true) ? $_POST['tipo'] : 'otro';
 
         if (!$id || !$nombre) responder(false, 'Datos inválidos.');
 
