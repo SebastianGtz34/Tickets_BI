@@ -123,6 +123,7 @@ $noEmpSesion = requiereSesionPage();
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+<script src="js/funciones.js"></script>
 <script>
 /* Helpers MESS */
 function messColor(token) {
@@ -157,6 +158,7 @@ function mostrarToast(mensaje, tipo) {
 }
 
 var KPI_ID = null;
+var categoriaTipos = {}; // Guardar tipo de cada categoría
 
 $(function () {
     // Cargar categorías activas
@@ -169,19 +171,49 @@ $(function () {
             if (!res || !res.success) return;
             var sel = $('#id_categoria');
             var $sistemas = $('<optgroup label="Sistemas MESS">');
+            var $ti       = $('<optgroup label="Departamento TI">');
             var $otros    = $('<optgroup label="Otros alcances">');
             res.categorias.forEach(function (c) {
                 if (c.nombre === 'Tableros de KPIs') KPI_ID = String(c.id);
+                categoriaTipos[c.id] = c.tipo; // Guardar tipo
                 var opt = '<option value="' + c.id + '">' + $('<div>').text(c.nombre).html() + '</option>';
-                (c.tipo === 'sistema' ? $sistemas : $otros).append(opt);
+                if (c.tipo === 'sistema') $sistemas.append(opt);
+                else if (c.tipo === 'ti') $ti.append(opt);
+                else $otros.append(opt);
             });
             if ($sistemas.children().length) sel.append($sistemas);
+            if ($ti.children().length) sel.append($ti);
             if ($otros.children().length)    sel.append($otros);
-            sel.select2({ placeholder: 'Selecciona una categoría…', width: '100%' });
-            sel.on('change', toggleKpiCampos);
+            sel.select2({
+                placeholder: 'Selecciona una categoría…',
+                width: '100%',
+                templateResult: renderOpcionCategoria,
+                templateSelection: renderSeleccionCategoria
+            });
+            sel.on('change', function () { toggleKpiCampos(); });
         }
     });
 });
+
+var TIPO_LABEL_MAP = { 'Sistemas MESS': 'sistema', 'Departamento TI': 'ti', 'Otros alcances': 'otro' };
+
+function renderOpcionCategoria(opt) {
+    if (opt.children) {
+        var color = getColorPorTipo(TIPO_LABEL_MAP[opt.text]);
+        return $('<strong>').css({ color: color, fontWeight: '700' }).text(opt.text);
+    }
+    if (!opt.id) return opt.text;
+    return opt.text;
+}
+
+function renderSeleccionCategoria(opt) {
+    if (!opt.id) return opt.text;
+    var color = getColorPorTipo(categoriaTipos[opt.id]);
+    return $('<span>').append(
+        $('<span>').css({ display: 'inline-block', width: '10px', height: '10px',
+            borderRadius: '50%', background: color, marginRight: '7px', verticalAlign: 'middle' })
+    ).append(document.createTextNode(opt.text));
+}
 
 function toggleKpiCampos() {
     var esKpi = (KPI_ID && String($('#id_categoria').val()) === KPI_ID);

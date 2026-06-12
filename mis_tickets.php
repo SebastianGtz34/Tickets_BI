@@ -3,6 +3,7 @@ require_once 'conn.php';
 require_once 'auth.php';
 $noEmpSesion = requiereSesionPage();
 requiereBiPage($conn, $noEmpSesion);
+$deptoSesion = obtenerNombreDepto($conn, $noEmpSesion) ?: 'bi';
 
 $pageTitle = 'Mis Tickets';
 include 'encabezado.php';
@@ -68,6 +69,7 @@ include 'encabezado.php';
                         <th>Folio</th>
                         <th>Título</th>
                         <th>Categoría</th>
+                        <th>Solicitante</th>
                         <th>Prioridad</th>
                         <th>Estado</th>
                         <th>Fecha</th>
@@ -94,6 +96,7 @@ $(function () {
             data: function (d) {
                 return $.extend(d, {
                     accion: 'obtenerTickets',
+                    departamento: '<?= $deptoSesion ?>',
                     no_empleado: noEmpleado,
                     estado: $('#filtroEstado').val(),
                     prioridad: $('#filtroPrioridad').val()
@@ -105,6 +108,7 @@ $(function () {
             { data: 'folio', render: function (v) { return '<span class="folio-badge text-primary-custom">' + escHtml(v) + '</span>'; } },
             { data: 'titulo', render: function (v) { return '<span title="' + escHtml(v) + '">' + escHtml(v.length > 50 ? v.substring(0, 50) + '…' : v) + '</span>'; } },
             { data: 'categoria', defaultContent: '—' },
+            { data: 'nombre_solicitante', defaultContent: '—' },
             { data: 'prioridad', render: function (v) { return obtenerBadgePrioridad(v); } },
             { data: 'estado', render: function (v) { return obtenerBadgeEstado(v); } },
             { data: 'fecha_creacion', render: function (v) { return '<span class="fs-7">' + formatearFecha(v) + '</span>'; } },
@@ -115,7 +119,7 @@ $(function () {
                 }
             }
         ],
-        order: [[5, 'desc']],
+        order: [[6, 'desc']],
         pageLength: 15,
         responsive: true
     });

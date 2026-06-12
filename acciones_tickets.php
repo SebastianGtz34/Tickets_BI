@@ -30,11 +30,11 @@ function generarFolio(mysqli $conn): string {
     return sprintf('TKT-%d-%03d', $anio, $n);
 }
 
-/** Lista del equipo BI activo (depto 32): [{noEmpleado, nombre}, …]. */
+/** Lista del equipo BI+TI activo (deptos 32 y 38): [{noEmpleado, nombre}, …]. */
 function tkObtenerMiembrosBi(mysqli $conn): array {
     $res = $conn->query(
         "SELECT noEmpleado, nombre FROM mess_rrhh.usuarios
-         WHERE departamento = 32 AND estatus = 1
+         WHERE departamento IN (32, 38) AND estatus = 1
          ORDER BY nombre ASC"
     );
     $list = [];
@@ -62,14 +62,14 @@ function tkObtenerAsignados(mysqli $conn, int $idTicket): array {
     return $out;
 }
 
-/** Filtra una lista de noEmpleado dejando solo los que son del equipo BI (depto 32 activo). */
+/** Filtra una lista de noEmpleado dejando solo los que son del equipo BI+TI (deptos 32, 38 activos). */
 function tkFiltrarSoloBi(mysqli $conn, array $noEmps): array {
     $noEmps = array_values(array_unique(array_filter(array_map('intval', $noEmps))));
     if (!$noEmps) return [];
     $ph = implode(',', array_fill(0, count($noEmps), '?'));
     $stmt = $conn->prepare(
         "SELECT noEmpleado FROM mess_rrhh.usuarios
-         WHERE departamento = 32 AND estatus = 1
+         WHERE departamento IN (32, 38) AND estatus = 1
            AND noEmpleado IN ($ph)"
     );
     $stmt->bind_param(str_repeat('i', count($noEmps)), ...$noEmps);
@@ -173,24 +173,38 @@ switch ($accion) {
 
     // ── OBTENER TICKETS ───────────────────────────────────────────────────────
     case 'obtenerTickets': {
-        // es_bi se deriva del servidor — ignorar lo que mande el cliente.
-        // BI ve todo; no-BI ve solo los suyos (filtro forzado server-side).
-        $esBi       = $esBiSesion ? 1 : 0;
-        $estado     = $_POST['estado']     ?? '';
-        $prioridad  = $_POST['prioridad']  ?? '';
-        $fechaDesde = $_POST['fecha_desde'] ?? '';
-        $fechaHasta = $_POST['fecha_hasta'] ?? '';
-        $soloAsig   = (int)($_POST['solo_asignado'] ?? 0);
-        $limite     = (int)($_POST['limite'] ?? 0);
+        $esBi              = $esBiSesion ? 1 : 0;
+        $deptoParam        = trim($_POST['departamento'] ?? '');
+        $filtroCatDepto    = (int)($_POST['filtro_categoria_depto'] ?? 0);
+        $estado            = $_POST['estado']     ?? '';
+        $prioridad         = $_POST['prioridad']  ?? '';
+        $fechaDesde        = $_POST['fecha_desde'] ?? '';
+        $fechaHasta        = $_POST['fecha_hasta'] ?? '';
+        $soloAsig          = (int)($_POST['solo_asignado'] ?? 0);
+        $limite            = (int)($_POST['limite'] ?? 0);
 
         $where = ['1=1'];
         $params = [];
         $types  = '';
 
-        if (!$esBi) {
-            $where[] = 't.no_empleado_solicitante = ?';
-            $params[] = $noEmpleado;
-            $types   .= 's';
+        if ($filtroCatDepto && $esBi) {
+            // Bandeja: BI ve categorías sistema/otro, TI ve categorías ti
+            $deptoSesion = obtenerNombreDepto($conn, $noEmpSesion) ?: 'bi';
+            if ($deptoSesion === 'ti') {
+                $where[] = 'c.tipo = ?';
+                $params[] = 'ti';
+                $types   .= 's';
+            } else {
+                $where[] = "c.tipo IN ('sistema','otro')";
+            }
+        } else {
+            // Mis tickets: no-BI/TI siempre filtrado; BI/TI filtrado cuando la vista
+            // envía departamento (señal de que es contexto mis_tickets, no bandeja manual)
+            if (!$esBi || $deptoParam !== '') {
+                $where[] = 't.no_empleado_solicitante = ?';
+                $params[] = $noEmpleado;
+                $types   .= 's';
+            }
         }
         if ($soloAsig && $esBi) {
             $where[] = 'EXISTS (SELECT 1 FROM tickets_asignados ta_f WHERE ta_f.id_ticket = t.id AND ta_f.no_empleado = ?)';
@@ -220,7 +234,7 @@ switch ($accion) {
 
         $whereStr = implode(' AND ', $where);
         $limitStr = $limite > 0 ? "LIMIT $limite" : '';
-        $sql = "SELECT t.*, c.nombre AS categoria,
+        $sql = "SELECT t.*, c.nombre AS categoria, c.tipo AS categoria_tipo,
                        COALESCE(us.nombre, CONCAT('Empleado #', t.no_empleado_solicitante)) AS nombre_solicitante,
                        (SELECT GROUP_CONCAT(ta.no_empleado SEPARATOR ',')
                           FROM tickets_asignados ta WHERE ta.id_ticket = t.id) AS asignados_ids,
@@ -257,7 +271,7 @@ switch ($accion) {
         if (!$id) responder(false, 'ID inválido.');
 
         $stmt = $conn->prepare(
-            "SELECT t.*, c.nombre AS categoria,
+            "SELECT t.*, c.nombre AS categoria, c.tipo AS categoria_tipo,
                     COALESCE(us.nombre, CONCAT('Empleado #', t.no_empleado_solicitante)) AS nombre_solicitante
              FROM tickets t
              LEFT JOIN tickets_categorias c ON t.id_categoria = c.id
@@ -271,9 +285,16 @@ switch ($accion) {
 
         if (!$ticket) responder(false, 'Ticket no encontrado.');
 
-        // Si no es BI, solo puede ver el detalle de tickets que él creó
+        // No-BI/TI: puede ver si creó el ticket o si fue mencionado en algún comentario
         if (!$esBiSesion && (string)$ticket['no_empleado_solicitante'] !== (string)$noEmpleado) {
-            responder(false, 'No tienes permiso para ver este ticket.');
+            $chkMenc = $conn->prepare(
+                "SELECT 1 FROM tickets_comentarios WHERE id_ticket = ? AND FIND_IN_SET(?, menciones) LIMIT 1"
+            );
+            $chkMenc->bind_param('is', $id, $noEmpleado);
+            $chkMenc->execute();
+            $esMencionado = $chkMenc->get_result()->num_rows > 0;
+            $chkMenc->close();
+            if (!$esMencionado) responder(false, 'No tienes permiso para ver este ticket.');
         }
 
         // Asignados (puede haber hasta 3)
@@ -426,6 +447,7 @@ switch ($accion) {
     case 'obtenerEstadisticas': {
         // es_bi se deriva del servidor — ignorar lo que mande el cliente
         $esBi       = $esBiSesion ? 1 : 0;
+        $depto      = (int)($_POST['departamento'] ?? 0);
         $fechaDesde = $_POST['fecha_desde'] ?? '';
         $fechaHasta = $_POST['fecha_hasta'] ?? '';
         $idCat      = (int)($_POST['id_categoria'] ?? 0);
@@ -440,6 +462,11 @@ switch ($accion) {
             $where[] = 't.no_empleado_solicitante = ?';
             $types  .= 's';
             $params[] = $noEmpleado;
+        } elseif ($depto) {
+            // Filtrar por departamento del solicitante
+            $where[] = "t.no_empleado_solicitante IN (SELECT noEmpleado FROM mess_rrhh.usuarios WHERE departamento = ?)";
+            $types  .= 'i';
+            $params[] = $depto;
         }
         if ($fechaDesde) {
             $where[] = 'DATE(t.fecha_creacion) >= ?';

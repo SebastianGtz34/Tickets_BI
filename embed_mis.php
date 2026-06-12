@@ -4,6 +4,7 @@
 require_once 'conn.php';
 require_once 'auth.php';
 $noEmpSesion = requiereSesionPage();
+$deptoSesion = obtenerNombreDepto($conn, $noEmpSesion) ?: 'bi';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -67,6 +68,7 @@ $noEmpSesion = requiereSesionPage();
                         <th>Folio</th>
                         <th>Título</th>
                         <th>Categoría</th>
+                        <th>Solicitante</th>
                         <th>Prioridad</th>
                         <th>Estado</th>
                         <th>Fecha</th>
@@ -82,6 +84,7 @@ $noEmpSesion = requiereSesionPage();
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+<script src="js/funciones.js"></script>
 <script>
 function getCookie(name) {
     const cookies = new URLSearchParams(document.cookie.replace(/; /g, '&'));
@@ -127,6 +130,7 @@ $(function () {
             data: function (d) {
                 return $.extend(d, {
                     accion: 'obtenerTickets',
+                    departamento: '<?= $deptoSesion ?>',
                     no_empleado: getCookie('noEmpleadoBI'),
                     estado: $('#filtroEstado').val(),
                     prioridad: $('#filtroPrioridad').val()
@@ -138,6 +142,7 @@ $(function () {
             { data: 'folio', render: function (v) { return '<span class="folio-badge text-primary-custom">' + escHtml(v) + '</span>'; } },
             { data: 'titulo', render: function (v) { return '<span title="' + escHtml(v) + '">' + escHtml(v.length > 50 ? v.substring(0,50)+'…' : v) + '</span>'; } },
             { data: 'categoria', defaultContent: '—' },
+            { data: 'nombre_solicitante', defaultContent: '—' },
             { data: 'prioridad', render: function (v) { return badgePrioridad(v); } },
             { data: 'estado',    render: function (v) { return badgeEstado(v); } },
             { data: 'fecha_creacion', render: function (v) { return '<span class="fs-7">' + formatearFecha(v) + '</span>'; } },
@@ -148,7 +153,7 @@ $(function () {
                 }
             }
         ],
-        order: [[5, 'desc']],
+        order: [[6, 'desc']],
         pageLength: 10,
         responsive: true
     });

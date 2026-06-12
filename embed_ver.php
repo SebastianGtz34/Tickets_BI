@@ -118,6 +118,7 @@ if (!$idTicket) {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/tribute.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+<script src="js/funciones.js"></script>
 <script>
 var ID_TICKET = <?= $idTicket ?>;
 
@@ -240,7 +241,17 @@ function cargarTicket() {
         $('#metaFolio').text(t.folio);
         $('#metaEstado').html(badgeEstado(t.estado));
         $('#metaPrioridad').html(badgePrioridad(t.prioridad));
-        $('#metaCategoria').text(t.categoria || '—');
+
+        // Mostrar categoría con color por tipo
+        if (t.categoria) {
+            var color = getColorPorTipo(t.categoria_tipo);
+            var badgeHtml = '<span style="background: ' + color + '26; color: ' + color + '; padding: 4px 8px; border-radius: 4px; font-weight: 500;">'
+                          + escHtml(t.categoria) + '</span>';
+            $('#metaCategoria').html(badgeHtml);
+        } else {
+            $('#metaCategoria').text('—');
+        }
+
         var nombresAsig = (t.asignados || []).map(function (a) { return a.nombre || ('Empleado #' + a.no_empleado); });
         $('#metaAsignado').text(nombresAsig.length ? nombresAsig.join(', ') : 'Sin asignar');
         $('#metaFecha').text(formatearFecha(t.fecha_creacion));

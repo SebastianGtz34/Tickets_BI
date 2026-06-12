@@ -3,6 +3,7 @@ require_once 'conn.php';
 require_once 'auth.php';
 $noEmpSesion = requiereSesionPage();
 requiereBiPage($conn, $noEmpSesion);
+$deptoSesion = obtenerNombreDepto($conn, $noEmpSesion) ?: 'bi';
 
 $pageTitle = 'Bandeja de Tickets';
 include 'encabezado.php';
@@ -105,8 +106,8 @@ $(function () {
             data: function (d) {
                 return $.extend(d, {
                     accion: 'obtenerTickets',
+                    filtro_categoria_depto: 1,
                     no_empleado: noEmpleado,
-                    es_bi: 1,
                     estado: $('#filtroEstado').val(),
                     prioridad: $('#filtroPrioridad').val(),
                     fecha_desde: $('#filtroFechaDesde').val(),

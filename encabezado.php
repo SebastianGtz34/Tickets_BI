@@ -30,6 +30,8 @@ if (!$noEmpleado) {
 
     <!-- jQuery 3.7.1 -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Custom JS - Funciones globales (carga temprana) -->
+    <script src="js/funciones.js"></script>
 </head>
 <body>
 <script>

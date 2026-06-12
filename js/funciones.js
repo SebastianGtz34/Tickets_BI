@@ -2,6 +2,18 @@
    funciones.js — Utilidades globales
    ───────────────────────────────────────── */
 
+/** Colores por tipo de categoría */
+var COLORES_TIPO = {
+    'sistema': '#1a56db',  // Azul
+    'ti':      '#057a55',  // Verde
+    'otro':    '#c2410c'   // Naranja
+};
+
+/** Obtiene color por tipo de categoría */
+function getColorPorTipo(tipo) {
+    return COLORES_TIPO[tipo] || '#f0f0f0';
+}
+
 /** Lee una cookie por nombre */
 function getCookie(name) {
     const cookies = new URLSearchParams(document.cookie.replace(/; /g, '&'));

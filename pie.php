@@ -1,4 +1,4 @@
-    </div><!-- /content-area -->
+</div><!-- /content-area -->
 </div><!-- /page-content-wrapper -->
 </div><!-- /wrapper -->
 
@@ -16,7 +16,6 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <!-- Custom JS -->
-<script src="js/funciones.js"></script>
 <script src="js/sidebar.js"></script>
 </body>
 </html>
