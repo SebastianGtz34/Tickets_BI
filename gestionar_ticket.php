@@ -5,9 +5,11 @@ $noEmpSesion = requiereSesionPage();
 requiereBiPage($conn, $noEmpSesion);
 
 $pageTitle = 'Gestionar Ticket';
+$embed     = !empty($_GET['embed']);   // abierto desde el iframe de loginMaster (sin chrome)
+$volverUrl = $embed ? 'embed_mis.php' : 'bandeja.php';
 $idTicket  = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if (!$idTicket) {
-    header('Location: bandeja.php');
+    header('Location: ' . $volverUrl);
     exit;
 }
 include 'encabezado.php';
@@ -16,6 +18,7 @@ include 'encabezado.php';
 <div class="page-header">
     <div>
         <h1><i class="fas fa-tasks me-2 text-primary-custom"></i>Gestionar Ticket</h1>
+        <?php if (!$embed): ?>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="inicio.php">Dashboard</a></li>
@@ -23,8 +26,9 @@ include 'encabezado.php';
                 <li class="breadcrumb-item active" id="breadFolio">…</li>
             </ol>
         </nav>
+        <?php endif; ?>
     </div>
-    <a href="bandeja.php" class="btn btn-outline-mess-naranja">
+    <a href="<?= $volverUrl ?>" class="btn btn-outline-mess-naranja">
         <i class="fas fa-arrow-left me-1"></i>Volver
     </a>
 </div>
@@ -167,6 +171,7 @@ include 'encabezado.php';
 
 <script>
 var ID_TICKET = <?= $idTicket ?>;
+var VOLVER_URL = '<?= $volverUrl ?>';
 
 $(function () {
     cargarEquipoBi(function () {
@@ -291,7 +296,7 @@ function cerrarTicket() {
             if (err || !res) { mostrarAlerta('error', 'Error de comunicación.'); return; }
             if (res.success) {
                 mostrarAlerta('success', 'Ticket cerrado correctamente.');
-                setTimeout(function () { window.location.href = 'bandeja.php'; }, 2000);
+                setTimeout(function () { window.location.href = VOLVER_URL; }, 2000);
             } else {
                 mostrarAlerta('error', res.message || 'Error al cerrar el ticket.');
             }

@@ -4,6 +4,8 @@ if (!$noEmpleado) {
     header('Location: ../loginMaster/index.php');
     exit;
 }
+// Modo embebido (iframe en loginMaster): sin sidebar ni topbar, contenido a ancho completo.
+$embed = !empty($_GET['embed']);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -47,15 +49,16 @@ if (!$noEmpleado) {
 
 <div id="wrapper">
 
-<?php include 'menu.php'; ?>
+<?php if (!$embed) include 'menu.php'; ?>
 
 <!-- ══ PAGE CONTENT ══ -->
 <div id="page-content-wrapper">
 
+    <?php if (!$embed): ?>
     <!-- ── Topbar ── -->
     <nav id="topbar">
         <div class="d-flex align-items-center gap-2">
-            <button id="sidebarToggleTop" class="btn btn-link text-secondary p-0 d-md-none" type="button" aria-label="Abrir menú">
+            <button id="sidebarToggleTop" class="btn btn-link text-secondary p-0" type="button" aria-label="Mostrar/ocultar menú" title="Mostrar/ocultar menú">
                 <i class="fas fa-bars fa-lg"></i>
             </button>
             <span class="fw-600 d-none d-md-inline">
@@ -78,6 +81,7 @@ if (!$noEmpleado) {
         </div>
     </nav>
     <!-- ── /Topbar ── -->
+    <?php endif; ?>
 
     <!-- CONTENT START -->
     <div class="container-fluid content-area">
