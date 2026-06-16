@@ -12,6 +12,13 @@ if (!$idTicket) {
     header('Location: ' . $volverUrl);
     exit;
 }
+// Separación por departamento: BI no gestiona tickets de TI ni viceversa.
+// Staff de otro departamento (o mención cross-depto) cae a vista de solo lectura.
+if (!puedeGestionarTicket($conn, $noEmpSesion, $idTicket)) {
+    $lectura = $embed ? 'embed_ver.php' : 'ver_ticket.php';
+    header('Location: ' . $lectura . '?id=' . $idTicket);
+    exit;
+}
 include 'encabezado.php';
 ?>
 
@@ -182,7 +189,7 @@ $(function () {
 });
 
 function cargarEquipoBi(cb) {
-    ajaxPost('acciones_tickets.php', { accion: 'obtenerEquipoBi' }, function (err, res) {
+    ajaxPost('acciones_tickets.php', { accion: 'obtenerEquipoBi', id: ID_TICKET }, function (err, res) {
         var $sel = $('#selAsignar');
         if (!err && res && res.success) {
             res.miembros.forEach(function (m) {

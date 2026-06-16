@@ -115,4 +115,48 @@ if (!function_exists('ticketsAuthNoEmpleado')) {
             exit;
         }
     }
+
+    /**
+     * Departamento DUEÑO de un ticket, derivado del tipo de su categoría:
+     *   categoría tipo 'ti'                 → DEPT_TI (38)
+     *   tipo 'sistema'/'otro' o sin categoría → DEPT_BI (32)
+     * Único criterio de pertenencia ticket→departamento; lo reusan la bandeja,
+     * las notificaciones y el gating de gestión.
+     */
+    function ticketDepartamento(mysqli $conn, int $idTicket): int {
+        $stmt = $conn->prepare(
+            "SELECT c.tipo
+             FROM tickets t
+             LEFT JOIN tickets_categorias c ON c.id = t.id_categoria
+             WHERE t.id = ?"
+        );
+        $stmt->bind_param('i', $idTicket);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return ($row && $row['tipo'] === 'ti') ? DEPT_TI : DEPT_BI;
+    }
+
+    /**
+     * ¿Puede $noEmpleado GESTIONAR este ticket? Sí cuando pertenece al
+     * departamento dueño del ticket, o cuando está explícitamente asignado a él
+     * (asignación o @mención cross-departamento conservan acceso). Pensado para
+     * staff (BI/TI); a un no-staff lo bloquea antes requiereBi*.
+     */
+    function puedeGestionarTicket(mysqli $conn, int $noEmpleado, int $idTicket): bool {
+        $map = [DEPT_BI => 'bi', DEPT_TI => 'ti'];
+        if (($map[ticketDepartamento($conn, $idTicket)] ?? '') === obtenerNombreDepto($conn, $noEmpleado)) {
+            return true;
+        }
+        // Asignado explícitamente (p. ej. ingeniero de otro depto): conserva acceso.
+        $emp  = (string)$noEmpleado;
+        $stmt = $conn->prepare(
+            "SELECT 1 FROM tickets_asignados WHERE id_ticket = ? AND no_empleado = ? LIMIT 1"
+        );
+        $stmt->bind_param('is', $idTicket, $emp);
+        $stmt->execute();
+        $ok = $stmt->get_result()->num_rows > 0;
+        $stmt->close();
+        return $ok;
+    }
 }
