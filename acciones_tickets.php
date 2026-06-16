@@ -30,8 +30,26 @@ function generarFolio(mysqli $conn): string {
     return sprintf('TKT-%d-%03d', $anio, $n);
 }
 
-/** Lista del equipo BI+TI activo (deptos 32 y 38): [{noEmpleado, nombre}, …]. */
-function tkObtenerMiembrosBi(mysqli $conn): array {
+/**
+ * Lista de staff activo: BI+TI (deptos 32 y 38) o, si se pasa $depto, solo ese
+ * departamento. Se usa para el select de asignación, que se acota al depto del ticket.
+ * Devuelve [{noEmpleado, nombre}, …].
+ */
+function tkObtenerMiembrosBi(mysqli $conn, ?int $depto = null): array {
+    if ($depto !== null) {
+        $stmt = $conn->prepare(
+            "SELECT noEmpleado, nombre FROM mess_rrhh.usuarios
+             WHERE departamento = ? AND estatus = 1
+             ORDER BY nombre ASC"
+        );
+        $stmt->bind_param('i', $depto);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $list = [];
+        while ($r = $res->fetch_assoc()) $list[] = $r;
+        $stmt->close();
+        return $list;
+    }
     $res = $conn->query(
         "SELECT noEmpleado, nombre FROM mess_rrhh.usuarios
          WHERE departamento IN (32, 38) AND estatus = 1
@@ -62,17 +80,27 @@ function tkObtenerAsignados(mysqli $conn, int $idTicket): array {
     return $out;
 }
 
-/** Filtra una lista de noEmpleado dejando solo los que son del equipo BI+TI (deptos 32, 38 activos). */
-function tkFiltrarSoloBi(mysqli $conn, array $noEmps): array {
+/**
+ * Filtra una lista de noEmpleado dejando solo staff activo (deptos 32, 38);
+ * si se pasa $depto, restringe a ese único departamento (separación BI/TI).
+ */
+function tkFiltrarSoloBi(mysqli $conn, array $noEmps, ?int $depto = null): array {
     $noEmps = array_values(array_unique(array_filter(array_map('intval', $noEmps))));
     if (!$noEmps) return [];
     $ph = implode(',', array_fill(0, count($noEmps), '?'));
-    $stmt = $conn->prepare(
-        "SELECT noEmpleado FROM mess_rrhh.usuarios
-         WHERE departamento IN (32, 38) AND estatus = 1
-           AND noEmpleado IN ($ph)"
-    );
-    $stmt->bind_param(str_repeat('i', count($noEmps)), ...$noEmps);
+    if ($depto !== null) {
+        $sql    = "SELECT noEmpleado FROM mess_rrhh.usuarios
+                   WHERE departamento = ? AND estatus = 1 AND noEmpleado IN ($ph)";
+        $types  = 'i' . str_repeat('i', count($noEmps));
+        $params = array_merge([$depto], $noEmps);
+    } else {
+        $sql    = "SELECT noEmpleado FROM mess_rrhh.usuarios
+                   WHERE departamento IN (32, 38) AND estatus = 1 AND noEmpleado IN ($ph)";
+        $types  = str_repeat('i', count($noEmps));
+        $params = $noEmps;
+    }
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param($types, ...$params);
     $stmt->execute();
     $res = $stmt->get_result();
     $validos = [];
@@ -321,6 +349,7 @@ switch ($accion) {
         $estado = $_POST['estado'] ?? '';
         $validos = ['nuevo','en_proceso','pendiente','resuelto','cerrado','cancelado'];
         if (!$id || !in_array($estado, $validos, true)) responder(false, 'Datos inválidos.');
+        if (!puedeGestionarTicket($conn, $noEmpSesion, $id)) responder(false, 'Este ticket pertenece a otro departamento.');
 
         // Sellado de fechas según el estado destino:
         //  - 'resuelto'  → sella fecha_resuelto (base del auto-cierre a 3 días).
@@ -354,6 +383,7 @@ switch ($accion) {
         requiereBiJson($conn, $noEmpSesion);
         $id = (int)($_POST['id'] ?? 0);
         if (!$id) responder(false, 'ID inválido.');
+        if (!puedeGestionarTicket($conn, $noEmpSesion, $id)) responder(false, 'Este ticket pertenece a otro departamento.');
 
         // Acepta array (asignados[]) o string CSV ('523,177,45'). Vacío = limpiar asignación.
         $raw = $_POST['asignados'] ?? [];
@@ -366,12 +396,13 @@ switch ($accion) {
             responder(false, 'Máximo 3 ingenieros por ticket.');
         }
 
-        // Validar que TODOS sean miembros BI activos
+        // Validar que TODOS sean staff activo del departamento dueño del ticket.
         if ($solicitados) {
-            $validos = tkFiltrarSoloBi($conn, $solicitados);
-            $invalidos = array_diff($solicitados, $validos);
+            $deptoTicket = ticketDepartamento($conn, $id);
+            $validos     = tkFiltrarSoloBi($conn, $solicitados, $deptoTicket);
+            $invalidos   = array_diff($solicitados, $validos);
             if ($invalidos) {
-                responder(false, 'No es miembro del equipo BI: ' . implode(', ', $invalidos));
+                responder(false, 'No pertenecen al departamento del ticket: ' . implode(', ', $invalidos));
             }
         }
 
@@ -418,10 +449,14 @@ switch ($accion) {
         responder(true, 'Asignación actualizada.', ['asignados' => tkObtenerAsignados($conn, $id)]);
     }
 
-    // ── OBTENER EQUIPO BI (para el select de asignación) ──────────────────────
+    // ── OBTENER EQUIPO (para el select de asignación) ─────────────────────────
     case 'obtenerEquipoBi': {
         requiereBiJson($conn, $noEmpSesion);
-        responder(true, '', ['miembros' => tkObtenerMiembrosBi($conn)]);
+        // Asignables = solo el departamento dueño del ticket (separación BI/TI).
+        // Sin id se devuelve el equipo combinado (compatibilidad).
+        $id    = (int)($_POST['id'] ?? 0);
+        $depto = $id ? ticketDepartamento($conn, $id) : null;
+        responder(true, '', ['miembros' => tkObtenerMiembrosBi($conn, $depto)]);
     }
 
     // ── CERRAR TICKET ──────────────────────────────────────────────────────────
@@ -429,6 +464,7 @@ switch ($accion) {
         requiereBiJson($conn, $noEmpSesion);
         $id = (int)($_POST['id'] ?? 0);
         if (!$id) responder(false, 'ID inválido.');
+        if (!puedeGestionarTicket($conn, $noEmpSesion, $id)) responder(false, 'Este ticket pertenece a otro departamento.');
 
         $stmt = $conn->prepare(
             "UPDATE tickets SET estado = 'cerrado', fecha_cierre = NOW(), fecha_actualizacion = NOW() WHERE id = ?"

@@ -6,8 +6,10 @@
  *
  * Receptores del lado BI/TI:
  *   - Si el ticket tiene ingenieros asignados (1..3): a esos.
- *   - Si no hay asignados: todo el equipo BI+TI (mess_rrhh.usuarios
- *     WHERE departamento IN (32, 38) AND estatus = 1).
+ *   - Si no hay asignados: solo el departamento DUEÑO del ticket, no ambos.
+ *     El dueño se deriva del tipo de categoría (auth.php ticketDepartamento): tipo
+ *     'ti' → TI (38), 'sistema'/'otro' → BI (32). Así BI no recibe tickets de TI
+ *     ni viceversa.
  *
  * Eventos dirigidos al solicitante:
  *   - CambioEstadoTicket     → cuando BI/TI mueve el estado.
@@ -27,7 +29,11 @@
 
 if (!function_exists('tkNotifEquipoBi')) {
 
-    /** Lista de noEmpleado del equipo BI+TI (usuarios activos de deptos 32, 38). */
+    /**
+     * Lista de noEmpleado del equipo BI+TI (usuarios activos de deptos 32, 38).
+     * Para receptores de notificación usa tkNotifReceptoresBi (segmenta por depto);
+     * esta función se reserva para saber si un empleado es staff (mención / pantalla destino).
+     */
     function tkNotifEquipoBi(mysqli $conn): array {
         $res = $conn->query(
             "SELECT noEmpleado FROM mess_rrhh.usuarios
@@ -40,8 +46,24 @@ if (!function_exists('tkNotifEquipoBi')) {
         return $ids;
     }
 
+    /** Lista de noEmpleado de un solo departamento (32=BI, 38=TI) activo. */
+    function tkNotifEquipoDepto(mysqli $conn, int $depto): array {
+        $stmt = $conn->prepare(
+            "SELECT noEmpleado FROM mess_rrhh.usuarios
+             WHERE departamento = ? AND estatus = 1"
+        );
+        $stmt->bind_param('i', $depto);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $ids = [];
+        while ($r = $res->fetch_assoc()) $ids[] = (int)$r['noEmpleado'];
+        $stmt->close();
+        return $ids;
+    }
+
     /**
-     * Receptores BI para un ticket: asignados del ticket, o todo BI si no hay.
+     * Receptores para un ticket: sus asignados; si no hay, el departamento
+     * dueño del ticket (BI o TI, vía ticketDepartamento), no ambos equipos.
      * Excluye opcionalmente a $excepto.
      */
     function tkNotifReceptoresBi(mysqli $conn, int $idTicket, ?int $excepto = null): array {
@@ -53,7 +75,8 @@ if (!function_exists('tkNotifEquipoBi')) {
         while ($r = $res->fetch_assoc()) $destinos[] = (int)$r['no_empleado'];
         $stmt->close();
 
-        if (!$destinos) $destinos = tkNotifEquipoBi($conn);
+        // Sin asignados: solo el departamento dueño del ticket (BI o TI), no ambos.
+        if (!$destinos) $destinos = tkNotifEquipoDepto($conn, ticketDepartamento($conn, $idTicket));
         if ($excepto !== null) {
             $destinos = array_values(array_filter($destinos, fn($x) => $x !== $excepto));
         }
@@ -336,10 +359,10 @@ if (!function_exists('tkNotifEquipoBi')) {
         );
         $generadas = 0;
         if (!$res) return 0;
-        $bi = tkNotifEquipoBi($conn);
         while ($t = $res->fetch_assoc()) {
             $recordar = "Sin asignar: {$t['folio']} lleva 2+ días esperando ingeniero";
-            foreach ($bi as $d) {
+            // Solo el departamento dueño del ticket (BI o TI), no ambos.
+            foreach (tkNotifEquipoDepto($conn, ticketDepartamento($conn, (int)$t['id'])) as $d) {
                 if (tkNotifInsertar($conn, 523, $d, 'TicketSinAsignar', 'gestionar_ticket', (int)$t['id'], $recordar, true)) {
                     $generadas++;
                 }
