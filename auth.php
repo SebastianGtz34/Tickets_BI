@@ -3,7 +3,7 @@
  * Helpers de autenticación y autorización para Tickets BI/TI.
  *
  * Patrón: cookie `noEmpleadoBI` (set por loginMaster) + tabla cross-DB
- * `mess_rrhh.usuarios.departamento IN (32, 38)` (equipos BI y TI).
+ * `mess_rrhh.usuarios.departamento IN (27, 39)` (equipos BI y TI).
  *
  * Reglas:
  * - Verificación SIEMPRE en backend antes de ejecutar acción protegida.
@@ -11,9 +11,9 @@
  */
 
 // Constantes de departamentos y colores
-define('DEPTS_ALLOWED', [32, 38]); // BI=32, TI=38
-define('DEPT_BI', 32);
-define('DEPT_TI', 38);
+define('DEPTS_ALLOWED', [27, 39]); // BI=27, TI=39
+define('DEPT_BI', 27);
+define('DEPT_TI', 39);
 define('COLORES_TIPO', [
     'sistema' => '#050D9E',  // Azul oscuro (accent MESS)
     'ti'      => '#4a90e2',  // Azul claro
@@ -53,7 +53,7 @@ if (!function_exists('ticketsAuthNoEmpleado')) {
 
     /**
      * Determina si el empleado tiene acceso a Tickets (BI o TI).
-     * Acceso = usuarios activos de departamentos permitidos (32=BI, 38=TI).
+     * Acceso = usuarios activos de departamentos permitidos (27=BI, 39=TI).
      * Cachea el resultado por request en una estática.
      */
     function tieneAccesoTickets(mysqli $conn, int $noEmpleado): bool {
@@ -75,7 +75,7 @@ if (!function_exists('ticketsAuthNoEmpleado')) {
     }
 
     /**
-     * Determina si el empleado pertenece al equipo BI (depto 32).
+     * Determina si el empleado pertenece al equipo BI (depto 27).
      * Mantiene compatibilidad; usa tieneAccesoTickets internamente.
      * DEPRECATED: usar tieneAccesoTickets() para nuevas verificaciones.
      */
@@ -118,8 +118,8 @@ if (!function_exists('ticketsAuthNoEmpleado')) {
 
     /**
      * Departamento DUEÑO de un ticket, derivado del tipo de su categoría:
-     *   categoría tipo 'ti'                 → DEPT_TI (38)
-     *   tipo 'sistema'/'otro' o sin categoría → DEPT_BI (32)
+     *   categoría tipo 'ti'                 → DEPT_TI (39)
+     *   tipo 'sistema'/'otro' o sin categoría → DEPT_BI (27)
      * Único criterio de pertenencia ticket→departamento; lo reusan la bandeja,
      * las notificaciones y el gating de gestión.
      */

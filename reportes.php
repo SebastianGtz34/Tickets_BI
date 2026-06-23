@@ -42,8 +42,8 @@ include 'encabezado.php';
                 <label class="form-label mb-1 fs-7 fw-600">Departamento</label>
                 <select class="form-select form-select-sm" id="filtroDepartamento">
                     <option value="">Todos</option>
-                    <option value="32">BI</option>
-                    <option value="38">TI</option>
+                    <option value="27">BI</option>
+                    <option value="39">TI</option>
                 </select>
             </div>
             <div class="col-auto">

@@ -8,7 +8,7 @@
  *   - Si el ticket tiene ingenieros asignados (1..3): a esos.
  *   - Si no hay asignados: solo el departamento DUEÑO del ticket, no ambos.
  *     El dueño se deriva del tipo de categoría (auth.php ticketDepartamento): tipo
- *     'ti' → TI (38), 'sistema'/'otro' → BI (32). Así BI no recibe tickets de TI
+ *     'ti' → TI (39), 'sistema'/'otro' → BI (27). Así BI no recibe tickets de TI
  *     ni viceversa.
  *
  * Eventos dirigidos al solicitante:
@@ -30,14 +30,14 @@
 if (!function_exists('tkNotifEquipoBi')) {
 
     /**
-     * Lista de noEmpleado del equipo BI+TI (usuarios activos de deptos 32, 38).
+     * Lista de noEmpleado del equipo BI+TI (usuarios activos de deptos 27, 39).
      * Para receptores de notificación usa tkNotifReceptoresBi (segmenta por depto);
      * esta función se reserva para saber si un empleado es staff (mención / pantalla destino).
      */
     function tkNotifEquipoBi(mysqli $conn): array {
         $res = $conn->query(
             "SELECT noEmpleado FROM mess_rrhh.usuarios
-             WHERE departamento IN (32, 38) AND estatus = 1"
+             WHERE departamento IN (27, 39) AND estatus = 1"
         );
         $ids = [];
         if ($res) {
@@ -46,7 +46,7 @@ if (!function_exists('tkNotifEquipoBi')) {
         return $ids;
     }
 
-    /** Lista de noEmpleado de un solo departamento (32=BI, 38=TI) activo. */
+    /** Lista de noEmpleado de un solo departamento (27=BI, 39=TI) activo. */
     function tkNotifEquipoDepto(mysqli $conn, int $depto): array {
         $stmt = $conn->prepare(
             "SELECT noEmpleado FROM mess_rrhh.usuarios
@@ -85,7 +85,7 @@ if (!function_exists('tkNotifEquipoBi')) {
 
     /**
      * Usuarios que se pueden @mencionar: cualquier empleado activo de mess_rrhh.
-     * Marca es_bi=1 si pertenece al equipo BI/TI (deptos 32, 38) para decidir la pantalla
+     * Marca es_bi=1 si pertenece al equipo BI/TI (deptos 27, 39) para decidir la pantalla
      * destino de la notificación y la restricción de notas internas.
      * Devuelve [{noEmpleado:int, nombre:string, es_bi:int}, …].
      */
@@ -102,7 +102,7 @@ if (!function_exists('tkNotifEquipoBi')) {
                 $out[] = [
                     'noEmpleado' => $id,
                     'nombre'     => $r['nombre'] ?: ('Empleado #' . $id),
-                    'es_bi'      => in_array((int)$r['departamento'], [32, 38]) ? 1 : 0,
+                    'es_bi'      => in_array((int)$r['departamento'], [27, 39]) ? 1 : 0,
                 ];
             }
         }
@@ -112,7 +112,7 @@ if (!function_exists('tkNotifEquipoBi')) {
     /**
      * Pantalla destino para un destinatario en modo lectura (solicitante o mencionado no-gestor):
      * BI → `ver_ticket` (página completa, requiere BI); no-BI → `embed_ver` (vista slim, solo sesión).
-     * Evita que un usuario fuera del depto 32 caiga en un dead-end al abrir la notificación.
+     * Evita que un usuario fuera del depto 27 caiga en un dead-end al abrir la notificación.
      */
     function tkArchivoLectura(mysqli $conn, int $noEmp): string {
         static $bi = null;

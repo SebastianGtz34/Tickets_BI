@@ -31,7 +31,7 @@ function generarFolio(mysqli $conn): string {
 }
 
 /**
- * Lista de staff activo: BI+TI (deptos 32 y 38) o, si se pasa $depto, solo ese
+ * Lista de staff activo: BI+TI (deptos 27 y 39) o, si se pasa $depto, solo ese
  * departamento. Se usa para el select de asignación, que se acota al depto del ticket.
  * Devuelve [{noEmpleado, nombre}, …].
  */
@@ -52,7 +52,7 @@ function tkObtenerMiembrosBi(mysqli $conn, ?int $depto = null): array {
     }
     $res = $conn->query(
         "SELECT noEmpleado, nombre FROM mess_rrhh.usuarios
-         WHERE departamento IN (32, 38) AND estatus = 1
+         WHERE departamento IN (27, 39) AND estatus = 1
          ORDER BY nombre ASC"
     );
     $list = [];
@@ -81,7 +81,7 @@ function tkObtenerAsignados(mysqli $conn, int $idTicket): array {
 }
 
 /**
- * Filtra una lista de noEmpleado dejando solo staff activo (deptos 32, 38);
+ * Filtra una lista de noEmpleado dejando solo staff activo (deptos 27, 39);
  * si se pasa $depto, restringe a ese único departamento (separación BI/TI).
  */
 function tkFiltrarSoloBi(mysqli $conn, array $noEmps, ?int $depto = null): array {
@@ -95,7 +95,7 @@ function tkFiltrarSoloBi(mysqli $conn, array $noEmps, ?int $depto = null): array
         $params = array_merge([$depto], $noEmps);
     } else {
         $sql    = "SELECT noEmpleado FROM mess_rrhh.usuarios
-                   WHERE departamento IN (32, 38) AND estatus = 1 AND noEmpleado IN ($ph)";
+                   WHERE departamento IN (27, 39) AND estatus = 1 AND noEmpleado IN ($ph)";
         $types  = str_repeat('i', count($noEmps));
         $params = $noEmps;
     }

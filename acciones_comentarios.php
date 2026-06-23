@@ -193,7 +193,7 @@ switch ($accion) {
 
     // ── OBTENER MENCIONABLES ───────────────────────────────────────────────────
     // Usuarios que el actual puede @mencionar en este ticket: equipo BI + solicitante.
-    // Solo requiere sesión (los usuarios fuera del depto 32 también pueden mencionar).
+    // Solo requiere sesión (los usuarios fuera del depto 27 también pueden mencionar).
     case 'obtenerMencionables': {
         $idTicket = (int)($_POST['id_ticket'] ?? 0);
         if (!$idTicket) responder(false, 'ID de ticket inválido.');

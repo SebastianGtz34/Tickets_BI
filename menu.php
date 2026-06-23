@@ -10,11 +10,11 @@
         return $pagina === $actual ? ' active' : '';
     }
 
-    // Equipo BI/TI = usuarios activos de departamentos 32 y 38 (cambio 2026-06-12).
+    // Equipo BI/TI = usuarios activos de departamentos 27 y 39 (cambio 2026-06-12).
     $esEquipoBi = false;
     $stmtAcc = $conn->prepare(
         "SELECT 1 FROM mess_rrhh.usuarios
-         WHERE noEmpleado = ? AND departamento IN (32, 38) AND estatus = 1 LIMIT 1"
+         WHERE noEmpleado = ? AND departamento IN (27, 39) AND estatus = 1 LIMIT 1"
     );
     if ($stmtAcc) {
         $noEmpMenu = intval($_COOKIE['noEmpleadoBI']);
