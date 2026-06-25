@@ -24,9 +24,14 @@ include 'encabezado.php';
             </ol>
         </nav>
     </div>
-    <a href="mis_tickets.php" class="btn btn-outline-mess-naranja">
-        <i class="fas fa-arrow-left me-1"></i>Volver
-    </a>
+    <div class="d-flex gap-2">
+        <button id="btnCancelarTicket" class="btn btn-outline-danger d-none" onclick="cancelarMiTicket()">
+            <i class="fas fa-ban me-1"></i>Cancelar ticket
+        </button>
+        <a href="mis_tickets.php" class="btn btn-outline-mess-naranja">
+            <i class="fas fa-arrow-left me-1"></i>Volver
+        </a>
+    </div>
 </div>
 
 <div class="row g-3" id="ticketContainer">
@@ -177,6 +182,11 @@ function cargarDetalleTicket() {
         $('#nuevoComentario, #adjuntoComentario, #btnAgregarComentario').prop('disabled', terminal);
         $('#avisoTicketCerrado').toggleClass('d-none', !terminal);
 
+        // Botón "Cancelar ticket": solo el dueño (solicitante) y solo si aún no es terminal.
+        var miEmp = getCookie('noEmpleadoBI') || '';
+        var esSolicitante = (String(t.no_empleado_solicitante) === String(miEmp));
+        $('#btnCancelarTicket').toggleClass('d-none', !(esSolicitante && !terminal));
+
         if (res.adjuntos && res.adjuntos.length > 0) {
             var html = '';
             res.adjuntos.forEach(function (a) {
@@ -187,6 +197,21 @@ function cargarDetalleTicket() {
             $('#listaAdjuntos').html(html);
             $('#adjuntosTicket').removeClass('d-none');
         }
+    });
+}
+
+/** Cancelación por el propio dueño del ticket. Estado terminal: pide confirmación. */
+function cancelarMiTicket() {
+    confirmarAccion('Tu ticket se marcará como CANCELADO. Es un estado terminal: se cerrará y no podrá reabrirse.', function () {
+        ajaxPost('acciones_tickets.php', { accion: 'cancelarTicketUsuario', id: ID_TICKET }, function (err, res) {
+            if (err || !res) { mostrarAlerta('error', 'Error de comunicación.'); return; }
+            if (res.success) {
+                mostrarToast('Tu ticket fue cancelado.', 'warning');
+                cargarDetalleTicket();
+            } else {
+                mostrarAlerta('error', res.message || 'No se pudo cancelar el ticket.');
+            }
+        });
     });
 }
 </script>

@@ -30,9 +30,14 @@ if (!$idTicket) {
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0"><i class="fas fa-ticket-alt me-2 text-primary-custom"></i>Detalle del Ticket — <span id="folioHdr">…</span></h5>
-    <a href="embed_mis.php" class="btn btn-sm btn-outline-mess-naranja">
-        <i class="fas fa-arrow-left me-1"></i>Volver
-    </a>
+    <div class="d-flex gap-2">
+        <button id="btnCancelarTicket" class="btn btn-sm btn-outline-danger d-none" onclick="cancelarMiTicket()">
+            <i class="fas fa-ban me-1"></i>Cancelar ticket
+        </button>
+        <a href="embed_mis.php" class="btn btn-sm btn-outline-mess-naranja">
+            <i class="fas fa-arrow-left me-1"></i>Volver
+        </a>
+    </div>
 </div>
 
 <div class="row g-3">
@@ -262,6 +267,11 @@ function cargarTicket() {
         $('#nuevoComentario, #adjuntoComentario, #btnAgregarComentario').prop('disabled', terminal);
         $('#avisoTicketCerrado').toggleClass('d-none', !terminal);
 
+        // Botón "Cancelar ticket": solo el solicitante y solo si aún no es terminal.
+        var miEmp = getCookie('noEmpleadoBI') || '';
+        var esSolicitante = (String(t.no_empleado_solicitante) === String(miEmp));
+        $('#btnCancelarTicket').toggleClass('d-none', !(esSolicitante && !terminal));
+
         if (res.adjuntos && res.adjuntos.length > 0) {
             var html = '';
             res.adjuntos.forEach(function (a) {
@@ -309,6 +319,20 @@ function cargarComentarios() {
         contenedor.innerHTML = html;
         contenedor.scrollTop = contenedor.scrollHeight;
     }, 'json');
+}
+
+/** Cancelación por el propio solicitante. Estado terminal: pide confirmación. */
+function cancelarMiTicket() {
+    confirmarAccion('Tu ticket se marcará como CANCELADO. Es un estado terminal: se cerrará y no podrá reabrirse.', function () {
+        $.post('acciones_tickets.php', { accion: 'cancelarTicketUsuario', id: ID_TICKET }, function (res) {
+            if (res && res.success) {
+                mostrarToast('Tu ticket fue cancelado.', 'warning');
+                cargarTicket();
+            } else {
+                mostrarToast((res && res.message) || 'No se pudo cancelar el ticket.', 'danger');
+            }
+        }, 'json');
+    });
 }
 
 function enviarComentarioEmbed() {
