@@ -197,6 +197,25 @@ if (!function_exists('tkNotifEquipoBi')) {
         }
     }
 
+    /**
+     * El solicitante canceló su propio ticket: avisa al equipo/asignados del
+     * departamento dueño. Reusa la acción 'CambioEstadoTicket' (ya conocida por la
+     * UI de loginMaster) y abre en la pantalla de gestión.
+     */
+    function tkNotificarCancelacionUsuario(mysqli $conn, int $idTicket, int $solicitante): void {
+        $stmt = $conn->prepare("SELECT folio FROM tickets WHERE id = ?");
+        $stmt->bind_param('i', $idTicket);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$row) return;
+
+        foreach (tkNotifReceptoresBi($conn, $idTicket, $solicitante) as $d) {
+            tkNotifInsertar($conn, $solicitante, $d, 'CambioEstadoTicket', 'gestionar_ticket', $idTicket,
+                "El solicitante canceló el ticket {$row['folio']}");
+        }
+    }
+
     /** $nuevosAsignados: array con los noEmpleado que se acaban de agregar (no los previos). */
     function tkNotificarAsignacion(mysqli $conn, int $idTicket, array $nuevosAsignados, int $actualizadoPor): void {
         if (!$nuevosAsignados) return;

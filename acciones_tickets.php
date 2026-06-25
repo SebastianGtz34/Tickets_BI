@@ -479,6 +479,47 @@ switch ($accion) {
         responder($ok, $ok ? '' : 'Error al cerrar ticket.');
     }
 
+    // ── CANCELAR TICKET (por el propio solicitante) ─────────────────────────────
+    // No requiere rol BI: cualquier usuario puede cancelar SU PROPIO ticket. En la
+    // BD solo cambia a estado 'cancelado' (terminal); la propiedad se verifica
+    // SIEMPRE contra el no_empleado de la sesión, nunca contra un parámetro cliente.
+    case 'cancelarTicketUsuario': {
+        $id = (int)($_POST['id'] ?? 0);
+        if (!$id) responder(false, 'ID inválido.');
+
+        $stmt = $conn->prepare(
+            "SELECT estado, no_empleado_solicitante FROM tickets WHERE id = ?"
+        );
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$row) responder(false, 'Ticket no encontrado.');
+        if ((string)$row['no_empleado_solicitante'] !== (string)$noEmpleado) {
+            responder(false, 'Solo puedes cancelar tickets que tú creaste.');
+        }
+        if (in_array($row['estado'], ['cerrado', 'cancelado'], true)) {
+            responder(false, 'Este ticket ya está ' . ($row['estado'] === 'cancelado' ? 'cancelado' : 'cerrado') . '.');
+        }
+
+        // Estado terminal: sella fecha_cierre y limpia fecha_resuelto (mismo sellado
+        // que la cancelación de staff en actualizarEstado).
+        $stmt = $conn->prepare(
+            "UPDATE tickets
+                SET estado = 'cancelado', fecha_resuelto = NULL, fecha_cierre = NOW(), fecha_actualizacion = NOW()
+              WHERE id = ? AND no_empleado_solicitante = ?"
+        );
+        $stmt->bind_param('is', $id, $noEmpleado);
+        $ok = $stmt->execute();
+        $stmt->close();
+
+        if ($ok) {
+            tkNotificarCancelacionUsuario($conn, $id, (int)$noEmpleado);
+        }
+        responder($ok, $ok ? 'Ticket cancelado.' : 'Error al cancelar el ticket.');
+    }
+
     // ── OBTENER ESTADÍSTICAS ───────────────────────────────────────────────────
     case 'obtenerEstadisticas': {
         // es_bi se deriva del servidor — ignorar lo que mande el cliente
