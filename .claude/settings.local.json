@@ -15,7 +15,9 @@
       "Bash(/c/wamp64/bin/php/php8.3.28/php.exe -r ' *)",
       "Bash(/c/wamp64/bin/php/php8.3.28/php.exe -l c:/wamp64/www/Tickets/logout.php)",
       "Bash(/c/wamp64/bin/php/php8.3.28/php.exe -l c:/wamp64/www/Tickets/menu.php)",
-      "Bash(/c/wamp64/bin/php/php8.3.28/php.exe -l c:/wamp64/www/Tickets/inicio.php)"
+      "Bash(/c/wamp64/bin/php/php8.3.28/php.exe -l c:/wamp64/www/Tickets/inicio.php)",
+      "PowerShell(& \"C:\\\\wamp64\\\\bin\\\\mysql\\\\mysql8.4.7\\\\bin\\\\mysql.exe\" -u root -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 -e \"SELECT t.id, t.folio, c.nombre AS categoria, c.tipo, IF\\(c.tipo='ti',39,27\\) AS depto_esperado, GROUP_CONCAT\\(DISTINCT u.departamento\\) AS deptos_notificados, t.fecha_creacion FROM mess_tickets_bi.tickets t LEFT JOIN mess_tickets_bi.tickets_categorias c ON c.id=t.id_categoria JOIN mess_rrhh.notificacion_historial n ON n.sistema='ticketsBI' AND n.accion='NuevoTicket' AND n.id_registro_referencia=t.id JOIN mess_rrhh.usuarios u ON u.noEmpleado=n.id_usuario_destino GROUP BY t.id, t.folio, c.nombre, c.tipo, t.fecha_creacion HAVING deptos_notificados <> CAST\\(depto_esperado AS CHAR\\) ORDER BY t.id;\" 2>&1)",
+      "PowerShell($p = \\(Get-ChildItem \"C:\\\\wamp64\\\\bin\\\\php\" -Directory | Select-Object -Last 1\\).FullName; \"$p\"; & \"$p\\\\php.exe\" -v)"
     ]
   }
 }

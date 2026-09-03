@@ -9,4 +9,7 @@
 *.xlsx
 *.zip
 *.csv
+
+# Credenciales por entorno (usar los .example.php como plantilla)
 conn.php
+config_correo.php
