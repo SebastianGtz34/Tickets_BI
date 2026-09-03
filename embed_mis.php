@@ -22,6 +22,10 @@ $esGestor    = tieneAccesoBi($conn, $noEmpSesion);
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
+    <!-- Extension Responsive: la tabla ya pasaba responsive:true pero sin
+         cargarla la opcion quedaba inerte y las 8-9 columnas se cortaban en
+         movil. Con esto colapsa las que no caben en una fila desplegable. -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
     <link rel="stylesheet" href="css/estilos.css">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <style>
@@ -112,6 +116,8 @@ $esGestor    = tieneAccesoBi($conn, $noEmpSesion);
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
 <script src="js/funciones.js"></script>
 <script>
 function getCookie(name) {

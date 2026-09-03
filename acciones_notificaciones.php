@@ -17,7 +17,8 @@
  *   - ComentarioBI           → cuando BI/TI agrega comentario público.
  *
  * Eventos dirigidos al equipo BI/TI:
- *   - NuevoTicket            → al crearse.
+ *   - NuevoTicket            → al crearse. ÚNICO evento que además manda correo
+ *                              (a los mismos destinos), vía includes/correo.php.
  *   - ComentarioUsuario      → cuando el solicitante comenta.
  *   - NotaInternaTicket      → cuando BI/TI marca una nota interna (solo entre BI/TI).
  *   - TicketEstancado        → cron: >= 3 días sin cambio de estado.
@@ -163,6 +164,130 @@ if (!function_exists('tkNotifEquipoBi')) {
         return $ok;
     }
 
+    // ── Correo (solo alta de ticket) ─────────────────────────────────────────
+
+    /** Correos válidos de una lista de noEmpleado (usuarios activos de mess_rrhh). */
+    function tkCorreosDeEmpleados(mysqli $conn, array $noEmps): array {
+        $noEmps = array_values(array_unique(array_filter(array_map('intval', $noEmps))));
+        if (!$noEmps) return [];
+
+        $ph   = implode(',', array_fill(0, count($noEmps), '?'));
+        $stmt = $conn->prepare(
+            "SELECT correo FROM mess_rrhh.usuarios
+             WHERE noEmpleado IN ($ph) AND estatus = 1 AND correo IS NOT NULL AND correo <> ''"
+        );
+        if (!$stmt) return [];
+        $stmt->bind_param(str_repeat('i', count($noEmps)), ...$noEmps);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $correos = [];
+        while ($r = $res->fetch_assoc()) $correos[] = trim((string)$r['correo']);
+        $stmt->close();
+        return $correos;
+    }
+
+    /**
+     * Aviso por correo de un ticket recién creado.
+     *
+     * $destinos son los MISMOS noEmpleado que recibieron la notificación in-app
+     * (en un alta siempre es el departamento dueño, BI o TI, porque todavía no
+     * hay ingenieros asignados). Así el correo nunca se desincroniza del ruteo.
+     *
+     * Nunca aborta ni imprime nada: lo llama crearTicket, que responde su propio
+     * JSON. Un fallo de SMTP solo se registra en el error_log. Devuelve true si
+     * el correo salió.
+     */
+    function tkCorreoNuevoTicket(mysqli $conn, int $idTicket, array $destinos, int $solicitante): bool {
+        $correos = tkCorreosDeEmpleados($conn, $destinos);
+        if (!$correos) {
+            error_log("Tickets correo: ticket $idTicket sin destinatarios con correo.");
+            return false;
+        }
+
+        $stmt = $conn->prepare(
+            "SELECT t.folio, t.titulo, t.descripcion, t.link, t.prioridad, t.fecha_creacion,
+                    COALESCE(c.nombre, 'Sin categoría') AS categoria,
+                    COALESCE(u.nombre, CONCAT('Empleado #', t.no_empleado_solicitante)) AS solicitante,
+                    (SELECT COUNT(*) FROM tickets_adjuntos a
+                      WHERE a.id_ticket = t.id AND a.id_comentario IS NULL) AS n_adjuntos
+             FROM tickets t
+             LEFT JOIN tickets_categorias c ON c.id = t.id_categoria
+             LEFT JOIN mess_rrhh.usuarios u ON u.noEmpleado = t.no_empleado_solicitante
+             WHERE t.id = ?"
+        );
+        if (!$stmt) return false;
+        $stmt->bind_param('i', $idTicket);
+        $stmt->execute();
+        $t = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$t) return false;
+
+        require_once __DIR__ . '/includes/correo.php';
+
+        $esc = fn($v) => htmlspecialchars((string)($v ?? ''), ENT_QUOTES, 'UTF-8');
+
+        // Colores de prioridad: los mismos semáforos que la bandeja.
+        $colorPrioridad = [
+            'baja'    => '#0fa083',
+            'media'   => '#484cac',
+            'alta'    => '#EAAA00',
+            'urgente' => '#dc3545',
+        ][$t['prioridad']] ?? '#6c757d';
+
+        $fila = fn($k, $v) =>
+            '<tr><td style="padding:4px 12px 4px 0;color:#6c757d;white-space:nowrap;vertical-align:top;">'
+            . $k . '</td><td style="padding:4px 0;">' . $v . '</td></tr>';
+
+        $filas  = $fila('Folio',       '<strong>' . $esc($t['folio']) . '</strong>');
+        $filas .= $fila('Solicitante', $esc($t['solicitante']));
+        $filas .= $fila('Categoría',   $esc($t['categoria']));
+        $filas .= $fila('Prioridad',
+            '<span style="display:inline-block;padding:2px 10px;border-radius:10px;font-size:13px;'
+            . 'color:#ffffff;background:' . $colorPrioridad . ';">'
+            . $esc(ucfirst($t['prioridad'])) . '</span>');
+        $filas .= $fila('Fecha', $esc(date('d/m/Y H:i', strtotime($t['fecha_creacion']))));
+        if (!empty($t['link'])) {
+            $filas .= $fila('Enlace',
+                '<a href="' . $esc($t['link']) . '" style="color:#050D9E;">' . $esc($t['link']) . '</a>');
+        }
+        if ((int)$t['n_adjuntos'] > 0) {
+            $filas .= $fila('Adjuntos', (int)$t['n_adjuntos'] . ' archivo(s) en el ticket');
+        }
+
+        // La descripción se recorta: el correo es un aviso, el detalle está en el
+        // sistema. nl2br para conservar los saltos de línea que escribió el usuario.
+        $descripcion = (string)$t['descripcion'];
+        $recortada   = mb_strlen($descripcion) > 600;
+        $descripcion = nl2br($esc(mb_substr($descripcion, 0, 600))) . ($recortada ? '…' : '');
+
+        $url = TK_URL_BASE . '/gestionar_ticket.php?id=' . $idTicket;
+
+        $cuerpo =
+            '<p style="margin:0 0 16px;">Se registró un nuevo ticket para tu equipo:</p>'
+            . '<p style="margin:0 0 14px;font-size:17px;font-weight:bold;color:#050D9E;">'
+            . $esc($t['titulo']) . '</p>'
+            . '<table style="font-size:14px;line-height:1.6;border-collapse:collapse;">' . $filas . '</table>'
+            . '<div style="margin:18px 0 0;padding:12px 16px;background:#f8f9fa;border-left:3px solid #050D9E;'
+            . 'border-radius:4px;font-size:14px;">' . $descripcion . '</div>'
+            . '<p style="margin:24px 0 8px;text-align:center;">'
+            . '<a href="' . $url . '" style="display:inline-block;padding:11px 26px;background:#050D9E;'
+            . 'color:#ffffff;text-decoration:none;border-radius:6px;font-weight:bold;">Ver ticket</a></p>'
+            . '<p style="margin:0;text-align:center;font-size:12px;color:#6c757d;">'
+            . 'Si el enlace te pide iniciar sesión, entra a MessBook y abre el sistema de Tickets.</p>';
+
+        $res = tkEnviarCorreo(
+            $correos,
+            'Nuevo ticket ' . $t['folio'] . ' — ' . mb_substr($t['titulo'], 0, 60),
+            'Aviso de Nuevo Ticket',
+            $cuerpo
+        );
+
+        if (!$res['ok']) {
+            error_log("Tickets correo: alta de {$t['folio']} (id $idTicket) no enviada — {$res['error']}");
+        }
+        return $res['ok'];
+    }
+
     // ── Eventos directos ─────────────────────────────────────────────────────
 
     function tkNotificarNuevoTicket(mysqli $conn, int $idTicket, int $solicitante, string $folio, string $titulo): void {
@@ -171,6 +296,10 @@ if (!function_exists('tkNotifEquipoBi')) {
         foreach ($destinos as $d) {
             tkNotifInsertar($conn, $solicitante, $d, 'NuevoTicket', 'gestionar_ticket', $idTicket, $recordar);
         }
+        // Aviso por correo a los MISMOS destinos que la notificación in-app, para
+        // que el equipo dueño se entere sin tener que estar dentro de MessBook.
+        // Solo en alta: ningún otro evento manda correo.
+        tkCorreoNuevoTicket($conn, $idTicket, $destinos, $solicitante);
     }
 
     function tkNotificarCambioEstado(mysqli $conn, int $idTicket, string $nuevoEstado, int $actualizadoPor): void {
