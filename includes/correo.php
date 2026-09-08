@@ -38,24 +38,49 @@ if (!function_exists('tkConfigCorreo')) {
      * Envuelve un contenido en la plantilla HTML institucional (azul MESS
      * Pantone 072 C, el mismo acento que usa css/estilos.css).
      * El $cuerpoHtml ya debe venir escapado por el llamador donde corresponda.
+     *
+     * Maquetado con TABLAS y anchos en atributo, no con div + max-width:
+     * Outlook usa el motor de Word y NO soporta max-width, así que un
+     * `<div style="max-width:640px">` se renderiza a todo el ancho del panel
+     * y la imagen a su tamaño nativo (el logo salía a ~1240px). El atributo
+     * width sí lo respeta. border-radius/box-shadow los ignora, pero no
+     * estorban: degradan a esquinas rectas.
      */
     function tkPlantillaCorreo(string $titulo, string $cuerpoHtml): string {
+        /** Ancho del correo y del logo, en px. */
+        $ancho     = 640;
+        $anchoLogo = 132;
+
+        $tabla = 'border="0" cellpadding="0" cellspacing="0" role="presentation"';
+
         return '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
-            . '<meta name="viewport" content="width=device-width,initial-scale=1"></head>'
-            . '<body style="margin:0;background:#f8f9fc;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">'
-            . '<div style="max-width:640px;margin:24px auto;background:#ffffff;border-radius:8px;overflow:hidden;'
-            . 'box-shadow:0 2px 8px rgba(0,0,0,.08);">'
-            . '<div style="padding:20px 24px 12px;text-align:center;">'
-            . '<img src="' . TK_LOGO_URL . '" alt="Grupo MESS" style="max-width:220px;height:auto;">'
-            . '</div>'
-            . '<div style="background:#050D9E;padding:12px 24px;text-align:center;color:#ffffff;'
-            . 'font-size:17px;font-weight:bold;">' . htmlspecialchars($titulo, ENT_QUOTES, 'UTF-8') . '</div>'
-            . '<div style="padding:24px 32px;font-size:15px;line-height:1.6;">' . $cuerpoHtml . '</div>'
-            . '<div style="padding:16px 32px;background:#f8f9fa;border-top:1px solid #e5e7eb;'
-            . 'font-size:12px;color:#6c757d;text-align:center;line-height:1.7;">'
+            . '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            . '<meta name="x-apple-disable-message-reformatting"></head>'
+            . '<body style="margin:0;padding:0;background:#f8f9fc;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">'
+            // Tabla exterior: pinta el fondo de extremo a extremo y centra.
+            . '<table ' . $tabla . ' width="100%" style="background:#f8f9fc;">'
+            . '<tr><td align="center" style="padding:24px 12px;">'
+            // Tabla interior: el ancho fijo que Outlook sí obedece.
+            . '<table ' . $tabla . ' width="' . $ancho . '"'
+            . ' style="width:' . $ancho . 'px;max-width:' . $ancho . 'px;background:#ffffff;'
+            . 'border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">'
+            . '<tr><td align="center" style="padding:20px 24px 12px;">'
+            . '<img src="' . TK_LOGO_URL . '" alt="Grupo MESS" width="' . $anchoLogo . '"'
+            . ' style="width:' . $anchoLogo . 'px;max-width:' . $anchoLogo . 'px;height:auto;'
+            . 'display:block;border:0;outline:none;text-decoration:none;">'
+            . '</td></tr>'
+            . '<tr><td align="center" style="background:#050D9E;padding:12px 24px;color:#ffffff;'
+            . 'font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;">'
+            . htmlspecialchars($titulo, ENT_QUOTES, 'UTF-8') . '</td></tr>'
+            . '<tr><td style="padding:24px 32px;font-family:Arial,Helvetica,sans-serif;'
+            . 'font-size:15px;line-height:1.6;color:#1f2937;">' . $cuerpoHtml . '</td></tr>'
+            . '<tr><td align="center" style="padding:16px 32px;background:#f8f9fa;'
+            . 'border-top:1px solid #e5e7eb;font-family:Arial,Helvetica,sans-serif;'
+            . 'font-size:12px;color:#6c757d;line-height:1.7;">'
             . '<strong style="color:#4b5563;">Sistema de Tickets — Grupo MESS</strong><br>'
             . '<span style="color:#9ca3af;">Este buz&oacute;n es autom&aacute;tico: no respondas a esta direcci&oacute;n.</span>'
-            . '</div></div></body></html>';
+            . '</td></tr></table>'
+            . '</td></tr></table></body></html>';
     }
 
     /**
