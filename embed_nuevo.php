@@ -23,6 +23,7 @@ $noEmpSesion = requiereSesionPage();
     </style>
 </head>
 <body>
+<script src="js/tema_embed.js"></script>
 
 <div class="embed-form-wrap">
     <div class="card form-card">
@@ -41,13 +42,27 @@ $noEmpSesion = requiereSesionPage();
                     </div>
                 </div>
 
+                <div class="mb-3">
+                    <label class="form-label fw-600 d-block">¿A quién va dirigido? <span class="text-danger">*</span></label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <input type="radio" class="btn-check" name="destino" id="destinoBi" value="bi" required autocomplete="off">
+                        <label class="btn btn-outline-primary px-4" for="destinoBi">BI</label>
+                        <input type="radio" class="btn-check" name="destino" id="destinoTi" value="ti" autocomplete="off">
+                        <label class="btn btn-outline-primary px-4" for="destinoTi">TI</label>
+                        <input type="radio" class="btn-check" name="destino" id="destinoRrhh" value="rrhh" autocomplete="off">
+                        <label class="btn btn-destino-rrhh px-4" for="destinoRrhh">RRHH</label>
+                        <div class="invalid-feedback w-100">Elige a quién va dirigido tu ticket.</div>
+                    </div>
+                </div>
+
                 <div class="row g-3 mb-3">
                     <div class="col-12 col-md-6">
                         <label for="id_categoria" class="form-label fw-600">Categoría <span class="text-danger">*</span></label>
-                        <select class="form-select select2-cat" id="id_categoria" name="id_categoria" required>
+                        <select class="form-select select2-cat" id="id_categoria" name="id_categoria" required disabled>
                             <option value="">Selecciona una categoría…</option>
                         </select>
                         <div class="invalid-feedback">Selecciona una categoría.</div>
+                        <div id="avisoSinCategorias" class="form-text d-none"><i class="fas fa-hourglass-half me-1"></i>Las categorías de este departamento están pendientes.</div>
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="prioridad" class="form-label fw-600">Prioridad <span class="text-danger">*</span></label>
@@ -159,8 +174,13 @@ function mostrarToast(mensaje, tipo) {
 
 var KPI_ID = null;
 var categoriaTipos = {}; // Guardar tipo de cada categoría
+var CATEGORIAS = [];     // Todas las activas; el select muestra solo las del destino elegido
 
 $(function () {
+    $('input[name="destino"]').on('change', aplicarDestino);
+    // "Limpiar" y el reset tras crear desmarcan el destino: volver a bloquear la categoría.
+    $('#formNuevoTicket').on('reset', function () { setTimeout(aplicarDestino, 0); });
+
     // Cargar categorías activas
     $.ajax({
         url: 'acciones_catalogos.php',
@@ -170,20 +190,11 @@ $(function () {
         success: function (res) {
             if (!res || !res.success) return;
             var sel = $('#id_categoria');
-            var $sistemas = $('<optgroup label="Sistemas MESS">');
-            var $ti       = $('<optgroup label="Departamento TI">');
-            var $otros    = $('<optgroup label="Otros alcances">');
+            CATEGORIAS = res.categorias;
             res.categorias.forEach(function (c) {
                 if (c.nombre === 'Tableros de KPIs') KPI_ID = String(c.id);
                 categoriaTipos[c.id] = c.tipo; // Guardar tipo
-                var opt = '<option value="' + c.id + '">' + $('<div>').text(c.nombre).html() + '</option>';
-                if (c.tipo === 'sistema') $sistemas.append(opt);
-                else if (c.tipo === 'ti') $ti.append(opt);
-                else $otros.append(opt);
             });
-            if ($sistemas.children().length) sel.append($sistemas);
-            if ($ti.children().length) sel.append($ti);
-            if ($otros.children().length)    sel.append($otros);
             sel.select2({
                 placeholder: 'Selecciona una categoría…',
                 width: '100%',
@@ -191,9 +202,22 @@ $(function () {
                 templateSelection: renderSeleccionCategoria
             });
             sel.on('change', function () { toggleKpiCampos(); });
+            aplicarDestino();
         }
     });
 });
+
+/** Paso 1 → paso 2: el destino elegido (BI/TI/RRHH) decide qué categorías se ofrecen. */
+function aplicarDestino() {
+    var depto = $('input[name="destino"]:checked').val() || '';
+    var $sel = $('#id_categoria');
+    poblarCategoriasDepto($sel, CATEGORIAS, depto);
+    // Departamento sin categorías todavía (RRHH): avisar y no dejar enviar
+    var pendiente = depto !== '' && !$sel.find('option[value!=""]').length;
+    $('#avisoSinCategorias').toggleClass('d-none', !pendiente);
+    $('#btnEnviarTicket').prop('disabled', pendiente);
+    $sel.prop('disabled', !depto || pendiente).val('').trigger('change');
+}
 
 var TIPO_LABEL_MAP = { 'Sistemas MESS': 'sistema', 'Departamento TI': 'ti', 'Otros alcances': 'otro' };
 

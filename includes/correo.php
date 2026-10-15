@@ -22,8 +22,11 @@ if (!function_exists('tkConfigCorreo')) {
     /** URL pública del sistema, para los enlaces de los correos. */
     define('TK_URL_BASE', 'https://messbook.com.mx/Tickets');
 
-    /** Logo institucional (URL absoluta: el correo se lee fuera del servidor). */
-    define('TK_LOGO_URL', 'https://messbook.com.mx/incidencias/img/MESS_05_Imagotipo_1.png');
+    /**
+     * Logo de Tickets — Messbook Support Center (URL absoluta: el correo se lee
+     * fuera del servidor). El nombre del archivo lleva espacio: va codificado.
+     */
+    define('TK_LOGO_URL', TK_URL_BASE . '/img/' . rawurlencode('Tickets Messbook.png'));
 
     /** Carga (y cachea) la configuración SMTP, o null si falta el archivo. */
     function tkConfigCorreo(): ?array {
@@ -49,7 +52,7 @@ if (!function_exists('tkConfigCorreo')) {
     function tkPlantillaCorreo(string $titulo, string $cuerpoHtml): string {
         /** Ancho del correo y del logo, en px. */
         $ancho     = 640;
-        $anchoLogo = 132;
+        $anchoLogo = 180;
 
         $tabla = 'border="0" cellpadding="0" cellspacing="0" role="presentation"';
 
@@ -65,7 +68,7 @@ if (!function_exists('tkConfigCorreo')) {
             . ' style="width:' . $ancho . 'px;max-width:' . $ancho . 'px;background:#ffffff;'
             . 'border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">'
             . '<tr><td align="center" style="padding:20px 24px 12px;">'
-            . '<img src="' . TK_LOGO_URL . '" alt="Grupo MESS" width="' . $anchoLogo . '"'
+            . '<img src="' . TK_LOGO_URL . '" alt="Messbook Support Center" width="' . $anchoLogo . '"'
             . ' style="width:' . $anchoLogo . 'px;max-width:' . $anchoLogo . 'px;height:auto;'
             . 'display:block;border:0;outline:none;text-decoration:none;">'
             . '</td></tr>'
