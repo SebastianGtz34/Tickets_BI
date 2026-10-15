@@ -27,6 +27,7 @@ if (!$idTicket) {
     </style>
 </head>
 <body>
+<script src="js/tema_embed.js"></script>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0"><i class="fas fa-ticket-alt me-2 text-primary-custom"></i>Detalle del Ticket — <span id="folioHdr">…</span></h5>

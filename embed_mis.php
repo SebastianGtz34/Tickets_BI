@@ -33,6 +33,7 @@ $esGestor    = tieneAccesoBi($conn, $noEmpSesion);
     </style>
 </head>
 <body>
+<script src="js/tema_embed.js"></script>
 
 <!-- Filtros -->
 <div class="card mb-3">

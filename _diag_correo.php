@@ -178,6 +178,8 @@ while ($t = $rs->fetch_assoc()) {
         count($destinos) . ' emp',
         $nInApp . ' notif');
 
+    // A quién le habría llegado: responde "¿por qué a mí no?" (TI vs BI, o era el solicitante).
+    if ($correos) echo "       → " . implode(', ', $correos) . "\n";
     if ($destinos && !$correos) {
         echo "       ^ tiene destinos pero NINGUNO con correo válido → correo no sale.\n";
     }
@@ -190,6 +192,49 @@ echo "\nRecuerda: solo el ALTA manda correo. Cambio de estado, asignación,\n";
 echo "comentario y cancelación son solo in-app, por diseño.\n";
 echo "Y el solicitante SIEMPRE se excluye: si un ingeniero de BI levanta un\n";
 echo "ticket de categoría BI, él no recibe su propio correo.\n";
+
+// ─────────────────────────────────────────────────────────────────────────────
+titulo('4b) error_log: lo que tkCorreoNuevoTicket() registró en silencio');
+
+echo "Cada alta que NO mandó correo deja aquí una línea 'Tickets correo:'. Si un\n";
+echo "ticket reciente no aparece, Gmail lo aceptó y el problema está del lado de\n";
+echo "quien recibe (filtro antispam de mess.com.mx), no en este servidor.\n\n";
+
+// En cPanel, sin error_log configurado, PHP escribe un archivo `error_log` junto
+// al script que falló (acciones_tickets.php vive en esta misma carpeta).
+$logs = array_unique(array_filter([
+    ini_get('error_log') ?: null,
+    __DIR__ . '/error_log',
+    __DIR__ . '/includes/error_log',
+    dirname(__DIR__) . '/error_log',
+]));
+$vistos = 0;
+foreach ($logs as $log) {
+    if (!is_file($log) || !is_readable($log)) { linea(basename(dirname($log)) . '/' . basename($log), 'no existe / ilegible'); continue; }
+    $vistos++;
+    // Solo el final: un error_log de cPanel puede pesar megas.
+    $fh = fopen($log, 'r');
+    fseek($fh, max(0, filesize($log) - 512 * 1024));
+    $lineas = preg_grep('/Tickets correo/', explode("\n", stream_get_contents($fh)));
+    fclose($fh);
+    linea($log, count($lineas) . ' línea(s) de correo en los últimos 512 KB');
+    foreach (array_slice($lineas, -25) as $l) echo '   ' . mb_substr($l, 0, 220) . "\n";
+
+    $todo = implode("\n", $lineas);
+    if (stripos($todo, 'not accepted') !== false || stripos($todo, 'authenticate') !== false) {
+        echo "\n>>> AQUÍ ESTÁ EL PROBLEMA: Gmail rechaza el login desde este servidor.\n";
+        echo ">>> App password revocada (cambiaron la contraseña de la cuenta) o Google\n";
+        echo ">>> bloqueó la IP del hosting. Revisa la alerta de seguridad en la cuenta.\n";
+    }
+    if (stripos($todo, 'sending limit') !== false || stripos($todo, 'quota') !== false) {
+        echo "\n>>> AQUÍ ESTÁ EL PROBLEMA: se agotó el cupo diario de envío de la cuenta\n";
+        echo ">>> Gmail, que comparten otros sistemas del ecosistema.\n";
+    }
+    if (stripos($todo, 'connect') !== false) {
+        echo "\n>>> AQUÍ ESTÁ EL PROBLEMA: el servidor no logra conectar a smtp.gmail.com.\n";
+    }
+}
+if (!$vistos) echo "\nNo encontré ningún error_log legible: búscalo en cPanel > Errors.\n";
 
 // ─────────────────────────────────────────────────────────────────────────────
 titulo('5) Prueba de envío real por SMTP');

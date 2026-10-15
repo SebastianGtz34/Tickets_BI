@@ -14,6 +14,36 @@ function getColorPorTipo(tipo) {
     return COLORES_TIPO[tipo] || '#f0f0f0';
 }
 
+/**
+ * Departamento al que llega un ticket según el tipo de su categoría:
+ * 'ti' → TI; 'sistema'/'otro' → BI. Espejo de ticketDepartamento() en auth.php.
+ * RRHH aún no tiene tipo de categoría, así que su lista sale vacía ("pendientes").
+ */
+function deptoDeTipo(tipo) {
+    return tipo === 'ti' ? 'ti' : 'bi';
+}
+
+/**
+ * Alta de ticket en dos pasos: deja en el select solo las categorías del
+ * departamento elegido ('bi' | 'ti'), agrupadas por tipo como siempre.
+ */
+function poblarCategoriasDepto($sel, categorias, depto) {
+    $sel.find('optgroup, option[value!=""]').remove();
+    var grupos = {
+        sistema: $('<optgroup label="Sistemas MESS">'),
+        ti:      $('<optgroup label="Departamento TI">'),
+        otro:    $('<optgroup label="Otros alcances">')
+    };
+    categorias.forEach(function (c) {
+        if (deptoDeTipo(c.tipo) !== depto) return;
+        var clave = (c.tipo === 'sistema' || c.tipo === 'ti') ? c.tipo : 'otro';
+        grupos[clave].append($('<option>').val(c.id).text(c.nombre));
+    });
+    ['sistema', 'ti', 'otro'].forEach(function (k) {
+        if (grupos[k].children().length) $sel.append(grupos[k]);
+    });
+}
+
 /** Lee una cookie por nombre */
 function getCookie(name) {
     const cookies = new URLSearchParams(document.cookie.replace(/; /g, '&'));

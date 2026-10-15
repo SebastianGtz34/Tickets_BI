@@ -35,6 +35,8 @@ INSERT INTO tickets_categorias (nombre, tipo, activo) VALUES
     ('Capacitación',       'otro',    1),
     ('Activos',            'sistema', 1),
     ('Entrada de Equipos', 'sistema', 1),
+    ('Gestión Personal',   'sistema', 1),
+    ('NEST',               'sistema', 1),
     ('Soporte Técnico',    'ti',      1),
     ('Mantenimiento',      'ti',      1),
     ('Otro / General',     'otro',    1),
