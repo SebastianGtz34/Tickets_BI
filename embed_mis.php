@@ -26,14 +26,14 @@ $esGestor    = tieneAccesoBi($conn, $noEmpSesion);
          cargarla la opcion quedaba inerte y las 8-9 columnas se cortaban en
          movil. Con esto colapsa las que no caben en una fila desplegable. -->
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
-    <link rel="stylesheet" href="css/estilos.css">
+    <link rel="stylesheet" href="css/estilos.css?v=<?= filemtime(__DIR__ . '/css/estilos.css') ?>">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <style>
         body { background: var(--bg); padding: 1rem; }
     </style>
 </head>
 <body>
-<script src="js/tema_embed.js"></script>
+<script src="js/tema_embed.js?v=<?= filemtime(__DIR__ . '/js/tema_embed.js') ?>"></script>
 
 <!-- Filtros -->
 <div class="card mb-3">
@@ -119,7 +119,7 @@ $esGestor    = tieneAccesoBi($conn, $noEmpSesion);
 <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-<script src="js/funciones.js"></script>
+<script src="js/funciones.js?v=<?= filemtime(__DIR__ . '/js/funciones.js') ?>"></script>
 <script>
 function getCookie(name) {
     const cookies = new URLSearchParams(document.cookie.replace(/; /g, '&'));

@@ -15,7 +15,7 @@ $noEmpSesion = requiereSesionPage();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-    <link rel="stylesheet" href="css/estilos.css">
+    <link rel="stylesheet" href="css/estilos.css?v=<?= filemtime(__DIR__ . '/css/estilos.css') ?>">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <style>
         body { background: var(--bg); padding: 1rem; }
@@ -23,7 +23,7 @@ $noEmpSesion = requiereSesionPage();
     </style>
 </head>
 <body>
-<script src="js/tema_embed.js"></script>
+<script src="js/tema_embed.js?v=<?= filemtime(__DIR__ . '/js/tema_embed.js') ?>"></script>
 
 <div class="embed-form-wrap">
     <div class="card form-card">
@@ -138,7 +138,7 @@ $noEmpSesion = requiereSesionPage();
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
-<script src="js/funciones.js"></script>
+<script src="js/funciones.js?v=<?= filemtime(__DIR__ . '/js/funciones.js') ?>"></script>
 <script>
 /* Helpers MESS */
 function messColor(token) {

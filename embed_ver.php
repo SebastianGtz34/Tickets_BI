@@ -20,14 +20,14 @@ if (!$idTicket) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <link rel="stylesheet" href="css/tribute.css">
-    <link rel="stylesheet" href="css/estilos.css">
+    <link rel="stylesheet" href="css/estilos.css?v=<?= filemtime(__DIR__ . '/css/estilos.css') ?>">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <style>
         body { background: var(--bg); padding: 1rem; }
     </style>
 </head>
 <body>
-<script src="js/tema_embed.js"></script>
+<script src="js/tema_embed.js?v=<?= filemtime(__DIR__ . '/js/tema_embed.js') ?>"></script>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0"><i class="fas fa-ticket-alt me-2 text-primary-custom"></i>Detalle del Ticket — <span id="folioHdr">…</span></h5>
@@ -124,7 +124,7 @@ if (!$idTicket) {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/tribute.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
-<script src="js/funciones.js"></script>
+<script src="js/funciones.js?v=<?= filemtime(__DIR__ . '/js/funciones.js') ?>"></script>
 <script>
 var ID_TICKET = <?= $idTicket ?>;
 

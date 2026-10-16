@@ -28,12 +28,12 @@ $embed = !empty($_GET['embed']);
     <link rel="stylesheet" href="css/tribute.css">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/estilos.css">
+    <link rel="stylesheet" href="css/estilos.css?v=<?= filemtime(__DIR__ . '/css/estilos.css') ?>">
 
     <!-- jQuery 3.7.1 -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <!-- Custom JS - Funciones globales (carga temprana) -->
-    <script src="js/funciones.js"></script>
+    <script src="js/funciones.js?v=<?= filemtime(__DIR__ . '/js/funciones.js') ?>"></script>
 </head>
 <body>
 <script>
