@@ -144,7 +144,7 @@ function cargarDetalleTicket() {
             return;
         }
         var t = res.ticket;
-        document.title = t.folio + ' — Tickets BI';
+        document.title = t.folio + ' — Tickets Messbook';
         $('#breadFolio').text(t.folio);
         $('#tituloTicket').text(t.titulo);
         $('#estadoBadge').html(obtenerBadgeEstado(t.estado));

@@ -1,5 +1,5 @@
 <?php
-// Salir de Tickets BI y regresar al panel de loginMaster.
+// Salir de Tickets Messbook y regresar al panel de loginMaster.
 // La sesión MESS (cookies con sufijo L) se conserva — solo se borran las
 // cookies de desarrollo que dev_login.php pudiera haber dejado.
 setcookie('noEmpleado',     '', time() - 3600, '/');

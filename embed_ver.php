@@ -1,6 +1,6 @@
 <?php
 // Detalle de ticket — vista slim para iframe en loginMaster.
-// Solo requiere sesión. No requiere BI.
+// Solo requiere sesión. No requiere ser staff.
 require_once 'conn.php';
 require_once 'auth.php';
 $noEmpSesion = requiereSesionPage();
@@ -202,7 +202,7 @@ function initMencionesEmbed() {
         var lista = (res && res.success && res.mencionables) ? res.mencionables : [];
         var values = lista.map(function (m) {
             var nombre = m.nombre || ('Empleado #' + m.noEmpleado);
-            return { key: nombre + (parseInt(m.es_bi) ? ' · BI' : ''), value: nombre, id: m.noEmpleado };
+            return { key: nombre + (parseInt(m.es_bi) ? ' · Soporte' : ''), value: nombre, id: m.noEmpleado };
         });
         _embTribute = new Tribute({
             values: values,

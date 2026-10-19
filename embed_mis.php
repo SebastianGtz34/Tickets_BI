@@ -3,10 +3,10 @@
 // Solo requiere sesión válida (cookie noEmpleadoBI). No requiere rol BI.
 //
 // Comportamiento según el rol del que abre la vista:
-//   - BI/TI (gestor): carga la Bandeja de su departamento (todos los tickets
+//   - Staff (gestor): carga la Bandeja de su departamento (todos los tickets
 //     del tipo correspondiente), con columna "Asignado a", filtros de fecha y
 //     "asignado a mí", y acción "Gestionar" → gestionar_ticket.php.
-//   - Fuera de BI/TI: solo sus propios tickets, acción "Ver" → embed_ver.php.
+//   - No staff: solo sus propios tickets, acción "Ver" → embed_ver.php.
 require_once 'conn.php';
 require_once 'auth.php';
 $noEmpSesion = requiereSesionPage();
@@ -175,7 +175,7 @@ $(function () {
         columnas.push({ data: 'asignados_nombres', render: function (v) { return v ? escHtml(v) : '<span class="text-muted fs-7">Sin asignar</span>'; } });
     }
 
-    columnas.push({ data: 'fecha_creacion', render: function (v) { return '<span class="fs-7">' + formatearFecha(v) + '</span>'; } });
+    columnas.push({ data: 'fecha_creacion', render: renderFechaTabla });
 
     // Acción: gestor → Gestionar (gestión completa); resto → Ver (slim)
     columnas.push({

@@ -6,6 +6,7 @@
 var COLORES_TIPO = {
     'sistema': '#1a56db',  // Azul
     'ti':      '#057a55',  // Verde
+    'rrhh':    '#db2777',  // Magenta
     'otro':    '#c2410c'   // Naranja
 };
 
@@ -16,30 +17,37 @@ function getColorPorTipo(tipo) {
 
 /**
  * Departamento al que llega un ticket según el tipo de su categoría:
- * 'ti' → TI; 'sistema'/'otro' → BI. Espejo de ticketDepartamento() en auth.php.
- * RRHH aún no tiene tipo de categoría, así que su lista sale vacía ("pendientes").
+ * 'ti' → TI; 'rrhh' → RRHH; 'sistema'/'otro' → BI. Espejo de ticketDepartamento()
+ * en auth.php. Un departamento sin categorías activas sale vacío ("pendientes").
  */
 function deptoDeTipo(tipo) {
-    return tipo === 'ti' ? 'ti' : 'bi';
+    return (tipo === 'ti' || tipo === 'rrhh') ? tipo : 'bi';
 }
+
+/** Etiqueta de cada optgroup del select de categorías (y su tipo, para el color). */
+var GRUPOS_CATEGORIA = {
+    sistema: 'Sistemas Messbook',
+    ti:      'Departamento TI',
+    rrhh:    'Recursos Humanos',
+    otro:    'Otros alcances'
+};
 
 /**
  * Alta de ticket en dos pasos: deja en el select solo las categorías del
- * departamento elegido ('bi' | 'ti'), agrupadas por tipo como siempre.
+ * departamento elegido ('bi' | 'ti' | 'rrhh'), agrupadas por tipo como siempre.
  */
 function poblarCategoriasDepto($sel, categorias, depto) {
     $sel.find('optgroup, option[value!=""]').remove();
-    var grupos = {
-        sistema: $('<optgroup label="Sistemas MESS">'),
-        ti:      $('<optgroup label="Departamento TI">'),
-        otro:    $('<optgroup label="Otros alcances">')
-    };
+    var grupos = {};
+    Object.keys(GRUPOS_CATEGORIA).forEach(function (k) {
+        grupos[k] = $('<optgroup>').attr('label', GRUPOS_CATEGORIA[k]);
+    });
     categorias.forEach(function (c) {
         if (deptoDeTipo(c.tipo) !== depto) return;
-        var clave = (c.tipo === 'sistema' || c.tipo === 'ti') ? c.tipo : 'otro';
+        var clave = grupos[c.tipo] ? c.tipo : 'otro';
         grupos[clave].append($('<option>').val(c.id).text(c.nombre));
     });
-    ['sistema', 'ti', 'otro'].forEach(function (k) {
+    Object.keys(GRUPOS_CATEGORIA).forEach(function (k) {
         if (grupos[k].children().length) $sel.append(grupos[k]);
     });
 }
@@ -154,6 +162,17 @@ function formatearFecha(fecha) {
     var pad = function (n) { return String(n).padStart(2, '0'); };
     return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear()
         + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+/**
+ * Render de DataTables para columnas de fecha: muestra DD/MM/YYYY HH:mm pero
+ * ordena con el valor crudo del servidor ('YYYY-MM-DD HH:MM:SS'). Si se ordena
+ * con el texto mostrado, DataTables compara por día y los tickets nuevos no
+ * quedan arriba.
+ */
+function renderFechaTabla(fecha, type) {
+    if (type === 'sort' || type === 'type') return fecha || '';
+    return '<span class="fs-7">' + formatearFecha(fecha) + '</span>';
 }
 
 /** Formatear tamaño en bytes */
@@ -285,7 +304,7 @@ function initMenciones(idTicket) {
         var lista = (!err && res && res.success && res.mencionables) ? res.mencionables : [];
         var values = lista.map(function (m) {
             var nombre = m.nombre || ('Empleado #' + m.noEmpleado);
-            return { key: nombre + (parseInt(m.es_bi) ? ' · BI' : ''), value: nombre, id: m.noEmpleado };
+            return { key: nombre + (parseInt(m.es_bi) ? ' · Soporte' : ''), value: nombre, id: m.noEmpleado };
         });
         _menciones.tribute = new Tribute({
             values: values,

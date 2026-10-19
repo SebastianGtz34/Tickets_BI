@@ -12,7 +12,11 @@ function responder(bool $success, string $message = '', array $extra = []): void
     exit;
 }
 
-// Acciones que requieren rol BI (escritura de catálogo)
+// Tipos válidos de categoría; cualquier otro valor se guarda como 'otro'.
+// 'ti' y 'rrhh' mandan el ticket a ese departamento (ticketDepartamento en auth.php).
+const TIPOS_CATEGORIA = ['sistema', 'ti', 'rrhh', 'otro'];
+
+// Acciones que requieren ser staff (escritura de catálogo)
 $accionesBi = ['crearCategoria', 'actualizarCategoria', 'toggleCategoria'];
 if (in_array($accion, $accionesBi, true)) {
     requiereBiJson($conn, $noEmpSesion);
@@ -34,7 +38,7 @@ switch ($accion) {
     // ── CREAR CATEGORÍA ───────────────────────────────────────────────────────
     case 'crearCategoria': {
         $nombre = trim($_POST['nombre'] ?? '');
-        $tipo   = in_array($_POST['tipo'] ?? '', ['sistema', 'ti'], true) ? $_POST['tipo'] : 'otro';
+        $tipo   = in_array($_POST['tipo'] ?? '', TIPOS_CATEGORIA, true) ? $_POST['tipo'] : 'otro';
 
         if (!$nombre) responder(false, 'El nombre es obligatorio.');
 
@@ -62,7 +66,7 @@ switch ($accion) {
     case 'actualizarCategoria': {
         $id     = (int)($_POST['id'] ?? 0);
         $nombre = trim($_POST['nombre'] ?? '');
-        $tipo   = in_array($_POST['tipo'] ?? '', ['sistema', 'ti'], true) ? $_POST['tipo'] : 'otro';
+        $tipo   = in_array($_POST['tipo'] ?? '', TIPOS_CATEGORIA, true) ? $_POST['tipo'] : 'otro';
 
         if (!$id || !$nombre) responder(false, 'Datos inválidos.');
 

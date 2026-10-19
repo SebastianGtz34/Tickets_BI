@@ -19,5 +19,5 @@ return [
     'usuario'     => 'cuenta@gmail.com',
     'password'    => 'app-password-de-16-letras',
     'from_correo' => 'cuenta@gmail.com',
-    'from_nombre' => 'Tickets BI/TI — Grupo MESS',
+    'from_nombre' => 'Tickets Messbook — Grupo MESS',
 ];

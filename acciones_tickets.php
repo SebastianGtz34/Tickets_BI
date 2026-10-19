@@ -31,7 +31,7 @@ function generarFolio(mysqli $conn): string {
 }
 
 /**
- * Lista de staff activo: BI+TI (deptos 27 y 39) o, si se pasa $depto, solo ese
+ * Lista de staff activo (todos los DEPTS_ALLOWED) o, si se pasa $depto, solo ese
  * departamento. Se usa para el select de asignación, que se acota al depto del ticket.
  * Devuelve [{noEmpleado, nombre}, …].
  */
@@ -52,7 +52,7 @@ function tkObtenerMiembrosBi(mysqli $conn, ?int $depto = null): array {
     }
     $res = $conn->query(
         "SELECT noEmpleado, nombre FROM mess_rrhh.usuarios
-         WHERE departamento IN (27, 39) AND estatus = 1
+         WHERE departamento IN (" . implode(',', DEPTS_ALLOWED) . ") AND estatus = 1
          ORDER BY nombre ASC"
     );
     $list = [];
@@ -81,8 +81,8 @@ function tkObtenerAsignados(mysqli $conn, int $idTicket): array {
 }
 
 /**
- * Filtra una lista de noEmpleado dejando solo staff activo (deptos 27, 39);
- * si se pasa $depto, restringe a ese único departamento (separación BI/TI).
+ * Filtra una lista de noEmpleado dejando solo staff activo (DEPTS_ALLOWED);
+ * si se pasa $depto, restringe a ese único departamento (separación por depto).
  */
 function tkFiltrarSoloBi(mysqli $conn, array $noEmps, ?int $depto = null): array {
     $noEmps = array_values(array_unique(array_filter(array_map('intval', $noEmps))));
@@ -95,7 +95,7 @@ function tkFiltrarSoloBi(mysqli $conn, array $noEmps, ?int $depto = null): array
         $params = array_merge([$depto], $noEmps);
     } else {
         $sql    = "SELECT noEmpleado FROM mess_rrhh.usuarios
-                   WHERE departamento IN (27, 39) AND estatus = 1 AND noEmpleado IN ($ph)";
+                   WHERE departamento IN (" . implode(',', DEPTS_ALLOWED) . ") AND estatus = 1 AND noEmpleado IN ($ph)";
         $types  = str_repeat('i', count($noEmps));
         $params = $noEmps;
     }
@@ -193,7 +193,7 @@ switch ($accion) {
             }
         }
 
-        // Notificar a BI del nuevo ticket
+        // Notificar al departamento dueño del nuevo ticket
         tkNotificarNuevoTicket($conn, $idTicket, (int)$noEmpleado, $folio, $titulo);
 
         responder(true, 'Ticket creado.', ['folio' => $folio, 'id' => $idTicket]);
@@ -216,17 +216,17 @@ switch ($accion) {
         $types  = '';
 
         if ($filtroCatDepto && $esBi) {
-            // Bandeja: BI ve categorías sistema/otro, TI ve categorías ti
+            // Bandeja: TI y RRHH ven las categorías de su tipo; BI ve sistema/otro
             $deptoSesion = obtenerNombreDepto($conn, $noEmpSesion) ?: 'bi';
-            if ($deptoSesion === 'ti') {
+            if ($deptoSesion !== 'bi') {
                 $where[] = 'c.tipo = ?';
-                $params[] = 'ti';
+                $params[] = $deptoSesion;
                 $types   .= 's';
             } else {
                 $where[] = "c.tipo IN ('sistema','otro')";
             }
         } else {
-            // Mis tickets: no-BI/TI siempre filtrado; BI/TI filtrado cuando la vista
+            // Mis tickets: no-staff siempre filtrado; staff filtrado cuando la vista
             // envía departamento (señal de que es contexto mis_tickets, no bandeja manual)
             if (!$esBi || $deptoParam !== '') {
                 $where[] = 't.no_empleado_solicitante = ?';
@@ -313,7 +313,7 @@ switch ($accion) {
 
         if (!$ticket) responder(false, 'Ticket no encontrado.');
 
-        // No-BI/TI: puede ver si creó el ticket o si fue mencionado en algún comentario
+        // No-staff: puede ver si creó el ticket o si fue mencionado en algún comentario
         if (!$esBiSesion && (string)$ticket['no_empleado_solicitante'] !== (string)$noEmpleado) {
             $chkMenc = $conn->prepare(
                 "SELECT 1 FROM tickets_comentarios WHERE id_ticket = ? AND FIND_IN_SET(?, menciones) LIMIT 1"
@@ -378,7 +378,7 @@ switch ($accion) {
         responder($ok, $ok ? '' : 'Error al actualizar estado.');
     }
 
-    // ── ASIGNAR TICKET (hasta 3 ingenieros BI) ────────────────────────────────
+    // ── ASIGNAR TICKET (hasta 3 responsables del depto) ────────────────────────────────
     case 'asignarTicket': {
         requiereBiJson($conn, $noEmpSesion);
         $id = (int)($_POST['id'] ?? 0);
@@ -452,7 +452,7 @@ switch ($accion) {
     // ── OBTENER EQUIPO (para el select de asignación) ─────────────────────────
     case 'obtenerEquipoBi': {
         requiereBiJson($conn, $noEmpSesion);
-        // Asignables = solo el departamento dueño del ticket (separación BI/TI).
+        // Asignables = solo el departamento dueño del ticket (separación por depto).
         // Sin id se devuelve el equipo combinado (compatibilidad).
         $id    = (int)($_POST['id'] ?? 0);
         $depto = $id ? ticketDepartamento($conn, $id) : null;
@@ -480,7 +480,7 @@ switch ($accion) {
     }
 
     // ── CANCELAR TICKET (por el propio solicitante) ─────────────────────────────
-    // No requiere rol BI: cualquier usuario puede cancelar SU PROPIO ticket. En la
+    // No requiere ser staff: cualquier usuario puede cancelar SU PROPIO ticket. En la
     // BD solo cambia a estado 'cancelado' (terminal); la propiedad se verifica
     // SIEMPRE contra el no_empleado de la sesión, nunca contra un parámetro cliente.
     case 'cancelarTicketUsuario': {

@@ -44,6 +44,7 @@ include 'encabezado.php';
                     <option value="">Todos</option>
                     <option value="27">BI</option>
                     <option value="39">TI</option>
+                    <option value="47">RRHH</option>
                 </select>
             </div>
             <div class="col-auto">

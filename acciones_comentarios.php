@@ -4,7 +4,7 @@ require_once 'conn.php';
 require_once 'auth.php';
 require_once 'acciones_notificaciones.php';
 
-// Sesión obligatoria. Identidad y rol BI derivan del servidor, no del cliente.
+// Sesión obligatoria. Identidad y rol de staff derivan del servidor, no del cliente.
 $noEmpSesion = requiereSesionJson();
 $esBiSesion  = tieneAccesoBi($conn, $noEmpSesion);
 
@@ -22,7 +22,7 @@ switch ($accion) {
     case 'agregarComentario': {
         $idTicket  = (int)($_POST['id_ticket']  ?? 0);
         $comentario = trim($_POST['comentario'] ?? '');
-        // Solo BI puede marcar comentario como interno
+        // Solo el staff puede marcar comentario como interno
         $esInterno  = ($esBiSesion && (int)($_POST['es_interno'] ?? 0) === 1) ? 1 : 0;
 
         if (!$idTicket || !$comentario) {
@@ -40,7 +40,7 @@ switch ($accion) {
             responder(false, 'Este ticket está cerrado. No se pueden agregar comentarios.');
         }
 
-        // Menciones (@usuario): validadas contra los mencionables del ticket (equipo BI + solicitante).
+        // Menciones (@usuario): validadas contra los mencionables del ticket (staff + solicitante).
         // El cliente nunca decide a quién se puede notificar — se filtra server-side.
         $mencionadosRaw = $_POST['mencionados'] ?? [];
         if (is_string($mencionadosRaw)) {
@@ -57,7 +57,7 @@ switch ($accion) {
             foreach ($mencionadosRaw as $mid) {
                 if ($mid === (int)$noEmpleado)          continue; // no auto-mención
                 if (!isset($permitidos[$mid]))          continue; // fuera del set permitido
-                if ($esInterno && $permitidos[$mid] !== 1) continue; // nota interna: solo a BI
+                if ($esInterno && $permitidos[$mid] !== 1) continue; // nota interna: solo a staff
                 $mencionadosValidos[] = $mid;
             }
         }
@@ -105,7 +105,7 @@ switch ($accion) {
             }
         }
 
-        // Notificar al destinatario apropiado (solicitante o BI)
+        // Notificar al destinatario apropiado (solicitante o staff)
         tkNotificarComentario($conn, $idTicket, $idComentario, $comentario, (int)$noEmpleado, $esInterno === 1, $esBiSesion);
 
         // Notificar a los @mencionados (además del flujo normal).
@@ -124,7 +124,7 @@ switch ($accion) {
 
         if (!$idTicket) responder(false, 'ID de ticket inválido.');
 
-        // Si no es BI, excluir notas internas
+        // Si no es staff, excluir notas internas
         $filtroInterno = $esBi ? '' : 'AND tc.es_interno = 0';
 
         $sql = "SELECT tc.*, ta.nombre_archivo, ta.ruta, ta.tamano,
@@ -192,7 +192,7 @@ switch ($accion) {
     }
 
     // ── OBTENER MENCIONABLES ───────────────────────────────────────────────────
-    // Usuarios que el actual puede @mencionar en este ticket: equipo BI + solicitante.
+    // Usuarios que el actual puede @mencionar en este ticket: staff + solicitante.
     // Solo requiere sesión (los usuarios fuera del depto 27 también pueden mencionar).
     case 'obtenerMencionables': {
         $idTicket = (int)($_POST['id_ticket'] ?? 0);

@@ -111,7 +111,7 @@ $(function () {
             { data: 'nombre_solicitante', defaultContent: '—' },
             { data: 'prioridad', render: function (v) { return obtenerBadgePrioridad(v); } },
             { data: 'estado', render: function (v) { return obtenerBadgeEstado(v); } },
-            { data: 'fecha_creacion', render: function (v) { return '<span class="fs-7">' + formatearFecha(v) + '</span>'; } },
+            { data: 'fecha_creacion', render: renderFechaTabla },
             {
                 data: 'id', orderable: false, className: 'text-center',
                 render: function (v) {

@@ -10,11 +10,12 @@
         return $pagina === $actual ? ' active' : '';
     }
 
-    // Equipo BI/TI = usuarios activos de departamentos 27 y 39 (cambio 2026-06-12).
+    // Staff = usuarios activos de los departamentos que atienden tickets (BI, TI, RRHH).
+    // Las páginas que incluyen el menú ya cargaron auth.php (DEPTS_ALLOWED).
     $esEquipoBi = false;
     $stmtAcc = $conn->prepare(
         "SELECT 1 FROM mess_rrhh.usuarios
-         WHERE noEmpleado = ? AND departamento IN (27, 39) AND estatus = 1 LIMIT 1"
+         WHERE noEmpleado = ? AND departamento IN (" . implode(',', DEPTS_ALLOWED) . ") AND estatus = 1 LIMIT 1"
     );
     if ($stmtAcc) {
         $noEmpMenu = intval($_COOKIE['noEmpleadoBI']);
@@ -60,7 +61,7 @@
 
     <?php if ($esEquipoBi): ?>
     <hr class="sidebar-divider">
-    <div class="sidebar-heading">Equipo BI/TI</div>
+    <div class="sidebar-heading">Equipo de soporte</div>
 
     <!-- Menú Bandeja -->
     <li class="nav-item<?= menuActivo('bandeja.php', $paginaActual) ?>">

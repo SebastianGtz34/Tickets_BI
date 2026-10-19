@@ -8,7 +8,7 @@
  * ticket), así que el fallo solo vive en el error_log del servidor. Este script
  * repite el mismo camino mostrando lo que allá se silencia.
  *
- * Uso: abrir https://TU-DOMINIO/Tickets/_diag_correo.php estando logueado como BI/TI.
+ * Uso: abrir https://TU-DOMINIO/Tickets/_diag_correo.php estando logueado como staff (BI/TI/RRHH).
  *      ?enviar=alguien@dominio.com  → además manda un correo de prueba real y
  *                                     muestra el error exacto de SMTP si falla.
  *
@@ -24,17 +24,17 @@ function linea(string $k, $v): void { echo str_pad($k, 30) . ': ' . $v . "\n"; }
 function titulo(string $t): void { echo "\n== $t ==\n"; }
 function si(bool $b): string { return $b ? 'SÍ' : 'NO'; }
 
-echo "DIAGNÓSTICO CORREO DE ALTA — Tickets BI/TI\n";
+echo "DIAGNÓSTICO CORREO DE ALTA — Tickets Messbook\n";
 echo "Fecha: " . date('Y-m-d H:i:s') . "\n";
 
 require_once __DIR__ . '/conn.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/acciones_notificaciones.php';
 
-// Gate: mismo criterio que el resto del sistema (BI o TI activo).
+// Gate: mismo criterio que el resto del sistema (staff activo).
 $noEmpSesion = ticketsAuthNoEmpleado();
 if (!$noEmpSesion || !tieneAccesoTickets($conn, $noEmpSesion)) {
-    echo "\nAcceso denegado: entra a MessBook como BI/TI y recarga esta página.\n";
+    echo "\nAcceso denegado: entra a MessBook como staff y recarga esta página.\n";
     exit;
 }
 linea('Sesión', $noEmpSesion);
@@ -96,9 +96,9 @@ if (!is_file($rutaCfg)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-titulo('3) Destinatarios: usuarios de BI (27) y TI (39) con correo');
+titulo('3) Destinatarios: staff de BI (27), TI (39) y RRHH (47) con correo');
 
-foreach ([DEPT_BI => 'BI', DEPT_TI => 'TI'] as $depto => $nombre) {
+foreach ([DEPT_BI => 'BI', DEPT_TI => 'TI', DEPT_RRHH => 'RRHH'] as $depto => $nombre) {
     $st = $conn->prepare(
         "SELECT noEmpleado, nombre, correo FROM mess_rrhh.usuarios
          WHERE departamento = ? AND estatus = 1 ORDER BY nombre"
@@ -174,7 +174,7 @@ while ($t = $rs->fetch_assoc()) {
         $t['folio'],
         date('d/m/y H:i', strtotime($t['fecha_creacion'])),
         $t['tipo'],
-        $depto === DEPT_TI ? 'TI (39)' : 'BI (27)',
+        strtoupper(DEPT_CLAVES[$depto]) . " ($depto)",
         count($destinos) . ' emp',
         $nInApp . ' notif');
 
@@ -252,7 +252,7 @@ if ($destinoPrueba === '') {
     $t0  = microtime(true);
     $res = tkEnviarCorreo(
         [$destinoPrueba],
-        'Prueba de correo — Tickets BI/TI',
+        'Prueba de correo — Tickets Messbook',
         'Prueba de Configuración',
         '<p>Si estás leyendo esto, el SMTP de Tickets funciona correctamente.</p>'
         . '<p style="color:#6c757d;font-size:13px;">Enviado desde _diag_correo.php el '
