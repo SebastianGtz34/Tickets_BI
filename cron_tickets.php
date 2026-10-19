@@ -1,6 +1,6 @@
 <?php
 /**
- * Cron de Tickets BI — pensado para ejecutarse desde el "Cron Job" de cPanel.
+ * Cron de Tickets Messbook — pensado para ejecutarse desde el "Cron Job" de cPanel.
  *
  * Corre los 3 chequeos periódicos:
  *   1. Notifica tickets estancados (>=3 días sin movimiento).
@@ -32,5 +32,5 @@ $estancados = tkNotifCronEstancados($conn);
 $sinAsignar = tkNotifCronSinAsignar($conn);
 $cerrados   = tkCronCerrarResueltos($conn);
 
-echo '[' . date('Y-m-d H:i:s') . '] Tickets BI cron — '
+echo '[' . date('Y-m-d H:i:s') . '] Tickets Messbook cron — '
    . "estancados={$estancados}, sin_asignar={$sinAsignar}, cerrados={$cerrados}" . PHP_EOL;

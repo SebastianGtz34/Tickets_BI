@@ -1,6 +1,6 @@
 <?php
 /**
- * correo.php — Envío de correo por SMTP para Tickets BI/TI.
+ * correo.php — Envío de correo por SMTP para Tickets Messbook.
  *
  * Patrón del ecosistema (ControlVehicular / SIVAC): PHPMailer local, Gmail
  * SSL:465. Las credenciales viven en config_correo.php (gitignored), NUNCA en
@@ -80,7 +80,7 @@ if (!function_exists('tkConfigCorreo')) {
             . '<tr><td align="center" style="padding:16px 32px;background:#f8f9fa;'
             . 'border-top:1px solid #e5e7eb;font-family:Arial,Helvetica,sans-serif;'
             . 'font-size:12px;color:#6c757d;line-height:1.7;">'
-            . '<strong style="color:#4b5563;">Sistema de Tickets — Grupo MESS</strong><br>'
+            . '<strong style="color:#4b5563;">Tickets Messbook — Grupo MESS</strong><br>'
             . '<span style="color:#9ca3af;">Este buz&oacute;n es autom&aacute;tico: no respondas a esta direcci&oacute;n.</span>'
             . '</td></tr></table>'
             . '</td></tr></table></body></html>';
@@ -127,7 +127,7 @@ if (!function_exists('tkConfigCorreo')) {
             $mail->Timeout    = (int)($cfg['timeout'] ?? 10);
             $mail->Username   = $cfg['usuario'];
             $mail->Password   = $cfg['password'];
-            $mail->setFrom($cfg['from_correo'] ?? $cfg['usuario'], $cfg['from_nombre'] ?? 'Tickets MESS');
+            $mail->setFrom($cfg['from_correo'] ?? $cfg['usuario'], $cfg['from_nombre'] ?? 'Tickets Messbook');
             $mail->isHTML(true);
             $mail->Subject = $asunto;
             $mail->Body    = tkPlantillaCorreo($titulo, $cuerpoHtml);

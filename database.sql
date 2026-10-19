@@ -1,5 +1,5 @@
 -- ============================================================
---  Sistema de Tickets BI — Script de base de datos completo
+--  Tickets Messbook — Script de base de datos completo
 --  Base de datos: mess_tickets_bi
 -- ============================================================
 
@@ -15,12 +15,17 @@ USE mess_tickets_bi;
 CREATE TABLE IF NOT EXISTS tickets_categorias (
     id     INT UNSIGNED  NOT NULL AUTO_INCREMENT,
     nombre VARCHAR(100)  NOT NULL,
-    tipo   ENUM('sistema','otro','ti') NOT NULL DEFAULT 'otro'
-           COMMENT 'sistema = módulo MESS; ti = departamento TI; otro = otros alcances (KPIs, academy, sitio web, etc.)',
+    tipo   ENUM('sistema','otro','ti','rrhh') NOT NULL DEFAULT 'otro'
+           COMMENT 'sistema = módulo MESS; ti = departamento TI; rrhh = Recursos Humanos; otro = otros alcances (KPIs, academy, sitio web, etc.)',
     activo TINYINT(1)    NOT NULL DEFAULT 1,
     PRIMARY KEY (id),
     UNIQUE KEY uq_cat_nombre (nombre)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Migración 2026-10-19 (RRHH) para una BD ya creada. Si `tipo` es ENUM, sin esto
+-- el INSERT/UPDATE de una categoría 'rrhh' falla o se guarda vacío:
+-- ALTER TABLE tickets_categorias
+--     MODIFY tipo ENUM('sistema','otro','ti','rrhh') NOT NULL DEFAULT 'otro';
 
 -- Datos iniciales de categorías
 INSERT INTO tickets_categorias (nombre, tipo, activo) VALUES
@@ -72,7 +77,7 @@ CREATE TABLE IF NOT EXISTS tickets (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ──────────────────────────────────────────────────────────
---  TABLA: tickets_asignados  (N ingenieros BI por ticket, máx. 3 enforced server-side)
+--  TABLA: tickets_asignados  (N responsables por ticket, máx. 3 enforced server-side)
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS tickets_asignados (
     id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -94,7 +99,7 @@ CREATE TABLE IF NOT EXISTS tickets_comentarios (
     id_ticket   INT UNSIGNED NOT NULL,
     no_empleado VARCHAR(50)  NOT NULL,
     comentario  TEXT         NOT NULL,
-    es_interno  TINYINT(1)   NOT NULL DEFAULT 0  COMMENT '0=público, 1=nota interna solo BI',
+    es_interno  TINYINT(1)   NOT NULL DEFAULT 0  COMMENT '0=público, 1=nota interna solo staff',
     menciones   VARCHAR(255)             DEFAULT NULL  COMMENT 'CSV de noEmpleado @mencionados en el comentario',
     fecha       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),

@@ -12,7 +12,7 @@ $embed = !empty($_GET['embed']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($pageTitle ?? 'Sistema de Tickets BI') ?></title>
+    <title><?= htmlspecialchars($pageTitle ?? 'Tickets Messbook') ?></title>
 
     <!-- Bootstrap 5.3 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
@@ -62,7 +62,7 @@ $embed = !empty($_GET['embed']);
                 <i class="fas fa-bars fa-lg"></i>
             </button>
             <span class="fw-600 d-none d-md-inline">
-                <?= htmlspecialchars($pageTitle ?? 'Sistema de Tickets BI') ?>
+                <?= htmlspecialchars($pageTitle ?? 'Tickets Messbook') ?>
             </span>
         </div>
 

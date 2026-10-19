@@ -219,7 +219,9 @@ function aplicarDestino() {
     $sel.prop('disabled', !depto || pendiente).val('').trigger('change');
 }
 
-var TIPO_LABEL_MAP = { 'Sistemas MESS': 'sistema', 'Departamento TI': 'ti', 'Otros alcances': 'otro' };
+// Etiqueta de optgroup → tipo (inverso de GRUPOS_CATEGORIA en js/funciones.js)
+var TIPO_LABEL_MAP = {};
+Object.keys(GRUPOS_CATEGORIA).forEach(function (k) { TIPO_LABEL_MAP[GRUPOS_CATEGORIA[k]] = k; });
 
 function renderOpcionCategoria(opt) {
     if (opt.children) {

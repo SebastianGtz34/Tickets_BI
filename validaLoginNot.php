@@ -1,13 +1,13 @@
 <?php
 /**
- * Tickets BI — endpoint de validación al hacer clic en una notificación.
+ * Tickets Messbook — endpoint de validación al hacer clic en una notificación.
  *
  * Lo invoca loginMaster (funcionesGlobales.js → construirUrlNotificacion) tras
  * marcar leída la notificación. Devuelve la URL destino y el front-end la abre
  * con ?id=<idRegistro> (caso especial ticketsBI, igual que entradasEq).
  *
- * Tickets BI NO mantiene sesión PHP propia. Solo valida que el empleado exista
- * y esté activo en mess_rrhh; el gating BI (gestionar_ticket) lo aplica la
+ * Tickets Messbook NO mantiene sesión PHP propia. Solo valida que el empleado exista
+ * y esté activo en mess_rrhh; el gating de staff (gestionar_ticket) lo aplica la
  * página destino con requiereBiPage().
  */
 header('Content-Type: application/json; charset=utf-8');
@@ -31,7 +31,7 @@ if ($sistema !== 'ticketsBI') {
     responder([
         'success' => false,
         'status'  => 'error',
-        'mensaje' => 'Sistema no corresponde a Tickets BI.'
+        'mensaje' => 'Sistema no corresponde a Tickets Messbook.'
     ]);
 }
 
@@ -71,7 +71,7 @@ if (!$valido) {
 $urlPorArchivo = [
     'gestionar_ticket' => '/Tickets/gestionar_ticket.php',
     'ver_ticket'       => '/Tickets/ver_ticket.php',
-    'embed_ver'        => '/Tickets/embed_ver.php', // destino para no-BI (solo requiere sesión)
+    'embed_ver'        => '/Tickets/embed_ver.php', // destino para no-staff (solo requiere sesión)
 ];
 
 $urlDestino = $urlPorArchivo[$archivo] ?? '';
@@ -79,7 +79,7 @@ if ($urlDestino === '') {
     responder([
         'success' => false,
         'status'  => 'error',
-        'mensaje' => 'Archivo no mapeado para Tickets BI.',
+        'mensaje' => 'Archivo no mapeado para Tickets Messbook.',
         'archivo' => $archivo
     ]);
 }

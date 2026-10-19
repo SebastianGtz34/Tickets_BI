@@ -1,9 +1,9 @@
 <?php
 /**
- * Helpers de autenticación y autorización para Tickets BI/TI.
+ * Helpers de autenticación y autorización para Tickets Messbook.
  *
  * Patrón: cookie `noEmpleadoBI` (set por loginMaster) + tabla cross-DB
- * `mess_rrhh.usuarios.departamento IN (27, 39)` (equipos BI y TI).
+ * `mess_rrhh.usuarios.departamento IN DEPTS_ALLOWED` (equipos que atienden tickets).
  *
  * Reglas:
  * - Verificación SIEMPRE en backend antes de ejecutar acción protegida.
@@ -11,12 +11,16 @@
  */
 
 // Constantes de departamentos y colores
-define('DEPTS_ALLOWED', [27, 39]); // BI=27, TI=39
+define('DEPTS_ALLOWED', [27, 39, 47]); // BI=27, TI=39, RRHH=47
 define('DEPT_BI', 27);
 define('DEPT_TI', 39);
+define('DEPT_RRHH', 47);
+/** Clave corta de cada departamento: es también el `tipo` de categoría de TI y RRHH. */
+define('DEPT_CLAVES', [DEPT_BI => 'bi', DEPT_TI => 'ti', DEPT_RRHH => 'rrhh']);
 define('COLORES_TIPO', [
     'sistema' => '#050D9E',  // Azul oscuro (accent MESS)
     'ti'      => '#4a90e2',  // Azul claro
+    'rrhh'    => '#db2777',  // Magenta
     'otro'    => '#9c27b0'   // Púrpura
 ]);
 
@@ -52,8 +56,8 @@ if (!function_exists('ticketsAuthNoEmpleado')) {
     }
 
     /**
-     * Determina si el empleado tiene acceso a Tickets (BI o TI).
-     * Acceso = usuarios activos de departamentos permitidos (27=BI, 39=TI).
+     * Determina si el empleado es staff de Tickets (atiende tickets de su depto).
+     * Acceso = usuarios activos de departamentos permitidos (27=BI, 39=TI, 47=RRHH).
      * Cachea el resultado por request en una estática.
      */
     function tieneAccesoTickets(mysqli $conn, int $noEmpleado): bool {
@@ -75,15 +79,14 @@ if (!function_exists('ticketsAuthNoEmpleado')) {
     }
 
     /**
-     * Determina si el empleado pertenece al equipo BI (depto 27).
-     * Mantiene compatibilidad; usa tieneAccesoTickets internamente.
+     * Alias histórico de tieneAccesoTickets (staff de cualquier depto permitido).
      * DEPRECATED: usar tieneAccesoTickets() para nuevas verificaciones.
      */
     function tieneAccesoBi(mysqli $conn, int $noEmpleado): bool {
         return tieneAccesoTickets($conn, $noEmpleado);
     }
 
-    /** Devuelve 'bi', 'ti' o '' según el departamento del empleado. */
+    /** Devuelve 'bi', 'ti', 'rrhh' o '' según el departamento del empleado. */
     function obtenerNombreDepto(mysqli $conn, int $noEmpleado): string {
         static $cache = [];
         if (isset($cache[$noEmpleado])) return $cache[$noEmpleado];
@@ -95,11 +98,10 @@ if (!function_exists('ticketsAuthNoEmpleado')) {
         if (!$stmt->execute()) { $stmt->close(); return $cache[$noEmpleado] = ''; }
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        $map = [DEPT_BI => 'bi', DEPT_TI => 'ti'];
-        return $cache[$noEmpleado] = $map[($row['departamento'] ?? 0)] ?? '';
+        return $cache[$noEmpleado] = DEPT_CLAVES[($row['departamento'] ?? 0)] ?? '';
     }
 
-    /** Para PÁGINAS: redirige a loginMaster si no tiene rol BI. Tickets BI es admin-only. */
+    /** Para PÁGINAS: redirige a loginMaster si no es staff. El panel completo es solo para staff. */
     function requiereBiPage(mysqli $conn, int $noEmpleado): void {
         if (!tieneAccesoBi($conn, $noEmpleado)) {
             header('Location: ../loginMaster/inicio.php');
@@ -107,7 +109,7 @@ if (!function_exists('ticketsAuthNoEmpleado')) {
         }
     }
 
-    /** Para ENDPOINTS JSON: responde 403 si no tiene rol BI. */
+    /** Para ENDPOINTS JSON: responde 403 si no es staff. */
     function requiereBiJson(mysqli $conn, int $noEmpleado): void {
         if (!tieneAccesoBi($conn, $noEmpleado)) {
             http_response_code(403);
@@ -118,10 +120,11 @@ if (!function_exists('ticketsAuthNoEmpleado')) {
 
     /**
      * Departamento DUEÑO de un ticket, derivado del tipo de su categoría:
-     *   categoría tipo 'ti'                 → DEPT_TI (39)
+     *   categoría tipo 'ti'                   → DEPT_TI (39)
+     *   categoría tipo 'rrhh'                 → DEPT_RRHH (47)
      *   tipo 'sistema'/'otro' o sin categoría → DEPT_BI (27)
      * Único criterio de pertenencia ticket→departamento; lo reusan la bandeja,
-     * las notificaciones y el gating de gestión.
+     * las notificaciones y el gating de gestión. Espejo JS: deptoDeTipo().
      */
     function ticketDepartamento(mysqli $conn, int $idTicket): int {
         $stmt = $conn->prepare(
@@ -134,18 +137,18 @@ if (!function_exists('ticketsAuthNoEmpleado')) {
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        return ($row && $row['tipo'] === 'ti') ? DEPT_TI : DEPT_BI;
+        $depto = array_search($row['tipo'] ?? '', DEPT_CLAVES, true);
+        return $depto !== false ? $depto : DEPT_BI;
     }
 
     /**
      * ¿Puede $noEmpleado GESTIONAR este ticket? Sí cuando pertenece al
      * departamento dueño del ticket, o cuando está explícitamente asignado a él
      * (asignación o @mención cross-departamento conservan acceso). Pensado para
-     * staff (BI/TI); a un no-staff lo bloquea antes requiereBi*.
+     * staff; a un no-staff lo bloquea antes requiereBi*.
      */
     function puedeGestionarTicket(mysqli $conn, int $noEmpleado, int $idTicket): bool {
-        $map = [DEPT_BI => 'bi', DEPT_TI => 'ti'];
-        if (($map[ticketDepartamento($conn, $idTicket)] ?? '') === obtenerNombreDepto($conn, $noEmpleado)) {
+        if (DEPT_CLAVES[ticketDepartamento($conn, $idTicket)] === obtenerNombreDepto($conn, $noEmpleado)) {
             return true;
         }
         // Asignado explícitamente (p. ej. ingeniero de otro depto): conserva acceso.

@@ -128,7 +128,7 @@ include 'encabezado.php';
 <script>
 $(function () {
     var noEmpleado = getCookie('noEmpleadoBI');
-    // Quien llega a inicio.php ya pasó requiereBiPage server-side: es BI.
+    // Quien llega a inicio.php ya pasó requiereBiPage server-side: es staff.
     cargarEstadisticas(noEmpleado, true);
     cargarUltimosTickets(noEmpleado, true);
 });

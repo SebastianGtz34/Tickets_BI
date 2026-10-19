@@ -1,26 +1,27 @@
 <?php
 /**
- * Notificaciones de Tickets BI/TI.
+ * Notificaciones de Tickets Messbook.
  *
- * Escribe en mess_rrhh.notificacion_historial con sistema = 'ticketsBI'.
+ * Escribe en mess_rrhh.notificacion_historial con sistema = 'ticketsBI' (nombre
+ * histórico: es la llave que mapea loginMaster, no cambiarla).
  *
- * Receptores del lado BI/TI:
- *   - Si el ticket tiene ingenieros asignados (1..3): a esos.
- *   - Si no hay asignados: solo el departamento DUEÑO del ticket, no ambos.
+ * Receptores del lado staff:
+ *   - Si el ticket tiene responsables asignados (1..3): a esos.
+ *   - Si no hay asignados: solo el departamento DUEÑO del ticket, no los demás.
  *     El dueño se deriva del tipo de categoría (auth.php ticketDepartamento): tipo
- *     'ti' → TI (39), 'sistema'/'otro' → BI (27). Así BI no recibe tickets de TI
- *     ni viceversa.
+ *     'ti' → TI (39), 'rrhh' → RRHH (47), 'sistema'/'otro' → BI (27). Así ningún
+ *     departamento recibe tickets de otro.
  *
  * Eventos dirigidos al solicitante:
- *   - CambioEstadoTicket     → cuando BI/TI mueve el estado.
- *   - AsignacionIngeniero    → cuando BI/TI asigna o reasigna.
- *   - ComentarioBI           → cuando BI/TI agrega comentario público.
+ *   - CambioEstadoTicket     → cuando el staff mueve el estado.
+ *   - AsignacionIngeniero    → cuando el staff asigna o reasigna.
+ *   - ComentarioBI           → cuando el staff agrega comentario público.
  *
- * Eventos dirigidos al equipo BI/TI:
+ * Eventos dirigidos al staff:
  *   - NuevoTicket            → al crearse. ÚNICO evento que además manda correo
  *                              (a los mismos destinos), vía includes/correo.php.
  *   - ComentarioUsuario      → cuando el solicitante comenta.
- *   - NotaInternaTicket      → cuando BI/TI marca una nota interna (solo entre BI/TI).
+ *   - NotaInternaTicket      → cuando el staff marca una nota interna (solo entre staff).
  *   - TicketEstancado        → cron: >= 3 días sin cambio de estado.
  *   - TicketSinAsignar       → cron: >= 2 días sin ingeniero asignado.
  *
@@ -31,14 +32,14 @@
 if (!function_exists('tkNotifEquipoBi')) {
 
     /**
-     * Lista de noEmpleado del equipo BI+TI (usuarios activos de deptos 27, 39).
+     * Lista de noEmpleado de todo el staff (usuarios activos de DEPTS_ALLOWED).
      * Para receptores de notificación usa tkNotifReceptoresBi (segmenta por depto);
      * esta función se reserva para saber si un empleado es staff (mención / pantalla destino).
      */
     function tkNotifEquipoBi(mysqli $conn): array {
         $res = $conn->query(
             "SELECT noEmpleado FROM mess_rrhh.usuarios
-             WHERE departamento IN (27, 39) AND estatus = 1"
+             WHERE departamento IN (" . implode(',', DEPTS_ALLOWED) . ") AND estatus = 1"
         );
         $ids = [];
         if ($res) {
@@ -47,7 +48,7 @@ if (!function_exists('tkNotifEquipoBi')) {
         return $ids;
     }
 
-    /** Lista de noEmpleado de un solo departamento (27=BI, 39=TI) activo. */
+    /** Lista de noEmpleado de un solo departamento (27=BI, 39=TI, 47=RRHH) activo. */
     function tkNotifEquipoDepto(mysqli $conn, int $depto): array {
         $stmt = $conn->prepare(
             "SELECT noEmpleado FROM mess_rrhh.usuarios
@@ -64,7 +65,7 @@ if (!function_exists('tkNotifEquipoBi')) {
 
     /**
      * Receptores para un ticket: sus asignados; si no hay, el departamento
-     * dueño del ticket (BI o TI, vía ticketDepartamento), no ambos equipos.
+     * dueño del ticket (vía ticketDepartamento), no los demás equipos.
      * Excluye opcionalmente a $excepto.
      */
     function tkNotifReceptoresBi(mysqli $conn, int $idTicket, ?int $excepto = null): array {
@@ -76,7 +77,7 @@ if (!function_exists('tkNotifEquipoBi')) {
         while ($r = $res->fetch_assoc()) $destinos[] = (int)$r['no_empleado'];
         $stmt->close();
 
-        // Sin asignados: solo el departamento dueño del ticket (BI o TI), no ambos.
+        // Sin asignados: solo el departamento dueño del ticket, no los demás.
         if (!$destinos) $destinos = tkNotifEquipoDepto($conn, ticketDepartamento($conn, $idTicket));
         if ($excepto !== null) {
             $destinos = array_values(array_filter($destinos, fn($x) => $x !== $excepto));
@@ -86,7 +87,7 @@ if (!function_exists('tkNotifEquipoBi')) {
 
     /**
      * Usuarios que se pueden @mencionar: cualquier empleado activo de mess_rrhh.
-     * Marca es_bi=1 si pertenece al equipo BI/TI (deptos 27, 39) para decidir la pantalla
+     * Marca es_bi=1 si es staff (DEPTS_ALLOWED) para decidir la pantalla
      * destino de la notificación y la restricción de notas internas.
      * Devuelve [{noEmpleado:int, nombre:string, es_bi:int}, …].
      */
@@ -103,7 +104,7 @@ if (!function_exists('tkNotifEquipoBi')) {
                 $out[] = [
                     'noEmpleado' => $id,
                     'nombre'     => $r['nombre'] ?: ('Empleado #' . $id),
-                    'es_bi'      => in_array((int)$r['departamento'], [27, 39]) ? 1 : 0,
+                    'es_bi'      => in_array((int)$r['departamento'], DEPTS_ALLOWED, true) ? 1 : 0,
                 ];
             }
         }
@@ -112,8 +113,8 @@ if (!function_exists('tkNotifEquipoBi')) {
 
     /**
      * Pantalla destino para un destinatario en modo lectura (solicitante o mencionado no-gestor):
-     * BI → `ver_ticket` (página completa, requiere BI); no-BI → `embed_ver` (vista slim, solo sesión).
-     * Evita que un usuario fuera del depto 27 caiga en un dead-end al abrir la notificación.
+     * staff → `ver_ticket` (página completa, requiere staff); resto → `embed_ver` (vista slim, solo sesión).
+     * Evita que un usuario que no es staff caiga en un dead-end al abrir la notificación.
      */
     function tkArchivoLectura(mysqli $conn, int $noEmp): string {
         static $bi = null;
@@ -190,7 +191,7 @@ if (!function_exists('tkNotifEquipoBi')) {
      * Aviso por correo de un ticket recién creado.
      *
      * $destinos son los MISMOS noEmpleado que recibieron la notificación in-app
-     * (en un alta siempre es el departamento dueño, BI o TI, porque todavía no
+     * (en un alta siempre es el departamento dueño —BI, TI o RRHH— porque todavía no
      * hay ingenieros asignados). Así el correo nunca se desincroniza del ruteo.
      *
      * Nunca aborta ni imprime nada: lo llama crearTicket, que responde su propio
@@ -369,7 +370,7 @@ if (!function_exists('tkNotifEquipoBi')) {
         if (!$row) return;
 
         $solicitante = (int)$row['no_empleado_solicitante'];
-        $nombres     = $row['nombres'] ?: 'el equipo BI';
+        $nombres     = $row['nombres'] ?: 'el equipo de soporte';
 
         // Solicitante: entera quién atiende su ticket.
         tkNotifInsertar(
@@ -406,7 +407,7 @@ if (!function_exists('tkNotifEquipoBi')) {
         $extracto    = mb_substr($texto, 0, 120);
         $extracto    = $extracto !== '' ? ": \"{$extracto}\"" : '';
 
-        // Notas internas: solo entre BI.
+        // Notas internas: solo entre staff.
         if ($esInterno) {
             foreach (tkNotifReceptoresBi($conn, $idTicket, $autor) as $d) {
                 tkNotifInsertar($conn, $autor, $d, 'NotaInternaTicket', 'gestionar_ticket', $idTicket,
@@ -416,16 +417,16 @@ if (!function_exists('tkNotifEquipoBi')) {
         }
 
         if ($autorEsBi) {
-            // Comentario público de BI → al solicitante + a los otros asignados del ticket.
+            // Comentario público del staff → al solicitante + a los otros asignados del ticket.
             tkNotifInsertar($conn, $autor, $solicitante, 'ComentarioBI', tkArchivoLectura($conn, $solicitante), $idTicket,
-                "BI comentó tu ticket {$row['folio']}{$extracto}");
+                "Soporte comentó tu ticket {$row['folio']}{$extracto}");
             foreach (tkNotifReceptoresBi($conn, $idTicket, $autor) as $d) {
                 if ($d === $solicitante) continue;
                 tkNotifInsertar($conn, $autor, $d, 'ComentarioBI', 'gestionar_ticket', $idTicket,
                     "Nuevo comentario en {$row['folio']}{$extracto}");
             }
         } else {
-            // Comentario del solicitante → asignados (o todo BI si no hay).
+            // Comentario del solicitante → asignados (o todo el depto dueño si no hay).
             foreach (tkNotifReceptoresBi($conn, $idTicket, $autor) as $d) {
                 tkNotifInsertar($conn, $autor, $d, 'ComentarioUsuario', 'gestionar_ticket', $idTicket,
                     "El solicitante comentó en {$row['folio']}{$extracto}");
@@ -436,7 +437,7 @@ if (!function_exists('tkNotifEquipoBi')) {
     /**
      * Notifica a los usuarios @mencionados en un comentario.
      * $mencionados: array de noEmpleado (ya validados como mencionables del ticket).
-     * El destino que sea BI llega a gestionar_ticket; el resto a ver_ticket.
+     * El destino que sea staff llega a gestionar_ticket; el resto a embed_ver.
      */
     function tkNotificarMencion(mysqli $conn, int $idTicket, string $texto, int $autor, array $mencionados): void {
         if (!$mencionados) return;
@@ -496,7 +497,7 @@ if (!function_exists('tkNotifEquipoBi')) {
         return $generadas;
     }
 
-    /** Tickets no cerrados con >=2 días desde creación y SIN asignación. Notifica a todo BI. */
+    /** Tickets no cerrados con >=2 días desde creación y SIN asignación. Notifica al depto dueño. */
     function tkNotifCronSinAsignar(mysqli $conn): int {
         $res = $conn->query(
             "SELECT id, folio
@@ -509,7 +510,7 @@ if (!function_exists('tkNotifEquipoBi')) {
         if (!$res) return 0;
         while ($t = $res->fetch_assoc()) {
             $recordar = "Sin asignar: {$t['folio']} lleva 2+ días esperando ingeniero";
-            // Solo el departamento dueño del ticket (BI o TI), no ambos.
+            // Solo el departamento dueño del ticket, no los demás.
             foreach (tkNotifEquipoDepto($conn, ticketDepartamento($conn, (int)$t['id'])) as $d) {
                 if (tkNotifInsertar($conn, 523, $d, 'TicketSinAsignar', 'gestionar_ticket', (int)$t['id'], $recordar, true)) {
                     $generadas++;
@@ -562,7 +563,7 @@ if (basename($_SERVER['SCRIPT_FILENAME']) === basename(__FILE__)) {
 
     switch ($accion) {
         case 'ejecutarCronTicketsBI': {
-            // Solo BI puede gatillar los chequeos.
+            // Solo el staff puede gatillar los chequeos.
             requiereBiJson($conn, $noEmpSesion);
             $a = tkNotifCronEstancados($conn);
             $b = tkNotifCronSinAsignar($conn);

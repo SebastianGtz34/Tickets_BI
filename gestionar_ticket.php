@@ -12,7 +12,7 @@ if (!$idTicket) {
     header('Location: ' . $volverUrl);
     exit;
 }
-// Separación por departamento: BI no gestiona tickets de TI ni viceversa.
+// Separación por departamento: ningún depto gestiona tickets de otro.
 // Staff de otro departamento (o mención cross-depto) cae a vista de solo lectura.
 if (!puedeGestionarTicket($conn, $noEmpSesion, $idTicket)) {
     $lectura = $embed ? 'embed_ver.php' : 'ver_ticket.php';
@@ -91,7 +91,7 @@ include 'encabezado.php';
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="esInterno" value="1">
                             <label class="form-check-label fs-7" for="esInterno">
-                                <i class="fas fa-lock me-1 text-warning"></i>Nota interna (solo BI)
+                                <i class="fas fa-lock me-1 text-warning"></i>Nota interna (solo equipo de soporte)
                             </label>
                         </div>
                         <button class="btn btn-primary btn-sm" id="btnAgregarComentario"
@@ -105,7 +105,7 @@ include 'encabezado.php';
 
     </div>
 
-    <!-- Columna metadatos + controles BI -->
+    <!-- Columna metadatos + controles de staff -->
     <div class="col-12 col-lg-4">
 
         <!-- Metadatos -->
@@ -137,7 +137,7 @@ include 'encabezado.php';
             </div>
         </div>
 
-        <!-- Controles BI -->
+        <!-- Controles de staff -->
         <div class="card mb-3">
             <div class="card-header"><i class="fas fa-sliders-h me-1"></i>Cambiar Estado</div>
             <div class="card-body">
@@ -166,7 +166,7 @@ include 'encabezado.php';
             <div class="card-header"><i class="fas fa-user-cog me-1"></i>Asignar Ticket</div>
             <div class="card-body">
                 <select id="selAsignar" multiple class="form-select form-select-sm" style="width:100%"></select>
-                <div class="form-text">Hasta 3 ingenieros del equipo BI.</div>
+                <div class="form-text">Hasta 3 responsables del departamento.</div>
                 <button class="btn btn-primary btn-sm w-100 mt-2" onclick="asignarTicket()">
                     <i class="fas fa-user-check me-1"></i>Guardar asignación
                 </button>

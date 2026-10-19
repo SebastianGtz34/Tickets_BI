@@ -23,7 +23,19 @@
       "Bash(grep -rlniE \"smtp\\\\.gmail|app.?password|SMTPSecure\" /c/wamp64/www --include=*.php 2>/dev/null | grep -vi \"Tickets/\" | head -20)",
       "Bash(grep -nE \"Username|Password|Host|Port|SMTPSecure|setFrom\" /c/wamp64/www/ControlVehicular/includes/enviar_notificacion.php | head -20)",
       "Read(//c/wamp64/www/ControlVehicular/includes/**)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(sed -i -e 's/Sistema de Tickets BI/Tickets Messbook/g' -e 's/Tickets BI\\\\/TI/Tickets Messbook/g' -e 's/Tickets BI\\\\b/Tickets Messbook/g' encabezado.php database.sql ver_ticket.php includes/correo.php _diag_correo.php config_correo.example.php cron_tickets.php logout.php validaLoginNot.php css/estilos.css)",
+      "Bash(sed -i \"s/' · BI'/' · Soporte'/\" embed_ver.php js/funciones.js)",
+      "Bash(sed -i -e 's/Nota interna \\(solo BI\\)/Nota interna \\(solo equipo de soporte\\)/' -e 's/Hasta 3 ingenieros del equipo BI\\\\./Hasta 3 responsables del departamento./' -e 's/BI no gestiona tickets de TI ni viceversa/ningún depto gestiona tickets de otro/' gestionar_ticket.php)",
+      "Bash(sed -i -e 's/Sistema de Tickets — Grupo MESS/Tickets Messbook — Grupo MESS/' -e \"s/?? 'Tickets MESS'\\)/?? 'Tickets Messbook'\\)/\" includes/correo.php)",
+      "Bash(sed -i -e 's/Identidad y rol BI derivan/Identidad y rol de staff derivan/' -e 's/Solo BI puede marcar comentario/Solo el staff puede marcar comentario/' -e 's/\\(equipo BI + solicitante\\)/\\(staff + solicitante\\)/' -e 's/nota interna: solo a BI/nota interna: solo a staff/' -e 's/\\(solicitante o BI\\)/\\(solicitante o staff\\)/' -e 's/Si no es BI, excluir/Si no es staff, excluir/' -e 's/en este ticket: equipo BI + solicitante/en este ticket: staff + solicitante/' acciones_comentarios.php)",
+      "Bash(curl -s -b \"noEmpleadoBI=403\" http://localhost/Tickets/embed_nuevo.php)",
+      "Skill(browser-automation)",
+      "Skill(browser-automation:*)",
+      "Bash(node \"C:/Users/User/.claude/skills/browser-automation/browser.mjs\" http://localhost/Tickets/ --script \"C:/Users/User/AppData/Local/Temp/claude/c--wamp64-www-Tickets/8ef09dd8-b512-4e16-9afa-7682a6be23e9/scratchpad/orden_tablas.mjs\" --timeout 45000)",
+      "Bash(node \"C:/Users/User/.claude/skills/browser-automation/browser.mjs\" http://localhost/Tickets/logout.php --script \"C:/Users/User/AppData/Local/Temp/claude/c--wamp64-www-Tickets/8ef09dd8-b512-4e16-9afa-7682a6be23e9/scratchpad/orden_tablas.mjs\" --timeout 45000)",
+      "Bash(sed -i -e 's/if \\(typeof $ === '\\\\''undefined'\\\\'' || !document.querySelector\\(sel\\)\\)/if \\(!document.querySelector\\(sel\\)\\)/' -e 's/const orden = $\\(sel\\).DataTable\\(\\).order\\(\\);/const orden = [...document.querySelectorAll\\(sel + '\\\\'' thead th'\\\\''\\)].map\\(th => th.innerText.trim\\(\\) + '\\\\'':'\\\\'' + \\(th.getAttribute\\('\\\\''aria-sort'\\\\''\\) || '\\\\'''\\\\''\\)\\).filter\\(s => !s.endsWith\\('\\\\'':'\\\\''\\)\\);/' C:/Users/User/AppData/Local/Temp/claude/c--wamp64-www-Tickets/8ef09dd8-b512-4e16-9afa-7682a6be23e9/scratchpad/orden_tablas.mjs)",
+      "Bash(node C:/Users/User/.claude/skills/browser-automation/browser.mjs http://localhost/Tickets/logout.php --script C:/Users/User/AppData/Local/Temp/claude/c--wamp64-www-Tickets/8ef09dd8-b512-4e16-9afa-7682a6be23e9/scratchpad/orden_tablas.mjs --timeout 60000)"
     ]
   }
 }
