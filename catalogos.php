@@ -66,11 +66,11 @@ include 'encabezado.php';
                     <div class="mb-3">
                         <label for="catTipo" class="form-label fw-600">Tipo <span class="text-danger">*</span></label>
                         <select class="form-select" id="catTipo" name="tipo" required>
-                            <option value="sistema">Sistema MESS</option>
+                            <option value="sistema">Sistemas Messbook / BI</option>
                             <option value="ti">Departamento TI</option>
+                            <option value="ti">RRHH</option>
                             <option value="otro">Otro alcance</option>
                         </select>
-                        <div class="form-text">"Sistema MESS" para módulos internos (Control Vehicular, Incidencias…); "Departamento TI" para solicitudes del área TI; "Otro" para alcances como KPIs, Messen Academy, Sitio Web, etc.</div>
                     </div>
                 </div>
                 <div class="modal-footer">
