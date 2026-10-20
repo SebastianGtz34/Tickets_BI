@@ -24,7 +24,7 @@ function deptoDeTipo(tipo) {
     return (tipo === 'ti' || tipo === 'rrhh') ? tipo : 'bi';
 }
 
-/** Etiqueta de cada optgroup del select de categorías (y su tipo, para el color). */
+/** Encabezado del select de categorías para las que no tienen `grupo`, por tipo. */
 var GRUPOS_CATEGORIA = {
     sistema: 'Sistemas Messbook',
     ti:      'Departamento TI',
@@ -34,22 +34,35 @@ var GRUPOS_CATEGORIA = {
 
 /**
  * Alta de ticket en dos pasos: deja en el select solo las categorías del
- * departamento elegido ('bi' | 'ti' | 'rrhh'), agrupadas por tipo como siempre.
+ * departamento elegido ('bi' | 'ti' | 'rrhh'). El encabezado (optgroup) es el
+ * `grupo` de la categoría si lo tiene (subcategorías de RRHH) o el de su tipo.
+ * Orden: por tipo como en GRUPOS_CATEGORIA y, dentro, por aparición (id).
  */
 function poblarCategoriasDepto($sel, categorias, depto) {
     $sel.find('optgroup, option[value!=""]').remove();
-    var grupos = {};
-    Object.keys(GRUPOS_CATEGORIA).forEach(function (k) {
-        grupos[k] = $('<optgroup>').attr('label', GRUPOS_CATEGORIA[k]);
-    });
+    var porTipo = {};
+    Object.keys(GRUPOS_CATEGORIA).forEach(function (k) { porTipo[k] = {}; });
     categorias.forEach(function (c) {
         if (deptoDeTipo(c.tipo) !== depto) return;
-        var clave = grupos[c.tipo] ? c.tipo : 'otro';
-        grupos[clave].append($('<option>').val(c.id).text(c.nombre));
+        var tipo     = porTipo[c.tipo] ? c.tipo : 'otro';
+        var etiqueta = c.grupo || GRUPOS_CATEGORIA[tipo];
+        if (!porTipo[tipo][etiqueta]) {
+            porTipo[tipo][etiqueta] = $('<optgroup>').attr({ label: etiqueta, 'data-tipo': tipo });
+        }
+        porTipo[tipo][etiqueta].append($('<option>').val(c.id).text(c.nombre));
     });
     Object.keys(GRUPOS_CATEGORIA).forEach(function (k) {
-        if (grupos[k].children().length) $sel.append(grupos[k]);
+        Object.keys(porTipo[k]).forEach(function (etiqueta) { $sel.append(porTipo[k][etiqueta]); });
     });
+}
+
+/** select2: encabezado de optgroup del select de categorías, coloreado por su tipo. */
+function renderOpcionCategoria(opt) {
+    if (opt.children) {
+        var color = getColorPorTipo($(opt.element).attr('data-tipo'));
+        return $('<strong>').css({ color: color, fontWeight: '700' }).text(opt.text);
+    }
+    return opt.text;
 }
 
 /** Lee una cookie por nombre */

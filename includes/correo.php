@@ -72,7 +72,7 @@ if (!function_exists('tkConfigCorreo')) {
             . ' style="width:' . $anchoLogo . 'px;max-width:' . $anchoLogo . 'px;height:auto;'
             . 'display:block;border:0;outline:none;text-decoration:none;">'
             . '</td></tr>'
-            . '<tr><td align="center" style="background:#050D9E;padding:12px 24px;color:#ffffff;'
+            . '<tr><td align="center" style="background:#176EDD;padding:12px 24px;color:#ffffff;'
             . 'font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;">'
             . htmlspecialchars($titulo, ENT_QUOTES, 'UTF-8') . '</td></tr>'
             . '<tr><td style="padding:24px 32px;font-family:Arial,Helvetica,sans-serif;'
@@ -80,7 +80,7 @@ if (!function_exists('tkConfigCorreo')) {
             . '<tr><td align="center" style="padding:16px 32px;background:#f8f9fa;'
             . 'border-top:1px solid #e5e7eb;font-family:Arial,Helvetica,sans-serif;'
             . 'font-size:12px;color:#6c757d;line-height:1.7;">'
-            . '<strong style="color:#4b5563;">Tickets Messbook — Grupo MESS</strong><br>'
+            . '<strong style="color:#4b5563;">Support Center — Grupo MESS</strong><br>'
             . '<span style="color:#9ca3af;">Este buz&oacute;n es autom&aacute;tico: no respondas a esta direcci&oacute;n.</span>'
             . '</td></tr></table>'
             . '</td></tr></table></body></html>';
