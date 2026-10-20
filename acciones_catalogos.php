@@ -38,6 +38,7 @@ switch ($accion) {
     // ── CREAR CATEGORÍA ───────────────────────────────────────────────────────
     case 'crearCategoria': {
         $nombre = trim($_POST['nombre'] ?? '');
+        $grupo  = trim($_POST['grupo'] ?? '') ?: null; // vacío = sin grupo (se agrupa por tipo)
         $tipo   = in_array($_POST['tipo'] ?? '', TIPOS_CATEGORIA, true) ? $_POST['tipo'] : 'otro';
 
         if (!$nombre) responder(false, 'El nombre es obligatorio.');
@@ -52,9 +53,9 @@ switch ($accion) {
         $chk->close();
 
         $stmt = $conn->prepare(
-            "INSERT INTO tickets_categorias (nombre, tipo, activo) VALUES (?, ?, 1)"
+            "INSERT INTO tickets_categorias (nombre, grupo, tipo, activo) VALUES (?, ?, ?, 1)"
         );
-        $stmt->bind_param('ss', $nombre, $tipo);
+        $stmt->bind_param('sss', $nombre, $grupo, $tipo);
         $ok = $stmt->execute();
         $id = (int)$conn->insert_id;
         $stmt->close();
@@ -66,6 +67,7 @@ switch ($accion) {
     case 'actualizarCategoria': {
         $id     = (int)($_POST['id'] ?? 0);
         $nombre = trim($_POST['nombre'] ?? '');
+        $grupo  = trim($_POST['grupo'] ?? '') ?: null;
         $tipo   = in_array($_POST['tipo'] ?? '', TIPOS_CATEGORIA, true) ? $_POST['tipo'] : 'otro';
 
         if (!$id || !$nombre) responder(false, 'Datos inválidos.');
@@ -80,9 +82,9 @@ switch ($accion) {
         $chk->close();
 
         $stmt = $conn->prepare(
-            "UPDATE tickets_categorias SET nombre = ?, tipo = ? WHERE id = ?"
+            "UPDATE tickets_categorias SET nombre = ?, grupo = ?, tipo = ? WHERE id = ?"
         );
-        $stmt->bind_param('ssi', $nombre, $tipo, $id);
+        $stmt->bind_param('sssi', $nombre, $grupo, $tipo, $id);
         $ok = $stmt->execute();
         $stmt->close();
 

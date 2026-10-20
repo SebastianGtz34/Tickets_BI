@@ -274,7 +274,7 @@ if (!function_exists('tkNotifEquipoBi')) {
             . '<a href="' . $url . '" style="display:inline-block;padding:11px 26px;background:#050D9E;'
             . 'color:#ffffff;text-decoration:none;border-radius:6px;font-weight:bold;">Ver ticket</a></p>'
             . '<p style="margin:0;text-align:center;font-size:12px;color:#6c757d;">'
-            . 'Si el enlace te pide iniciar sesión, entra a MessBook y abre el sistema de Tickets.</p>';
+            . 'Si el enlace te pide iniciar sesión, entra a Messbook y abre el sistema de Tickets.</p>';
 
         $res = tkEnviarCorreo(
             $correos,
@@ -298,7 +298,7 @@ if (!function_exists('tkNotifEquipoBi')) {
             tkNotifInsertar($conn, $solicitante, $d, 'NuevoTicket', 'gestionar_ticket', $idTicket, $recordar);
         }
         // Aviso por correo a los MISMOS destinos que la notificación in-app, para
-        // que el equipo dueño se entere sin tener que estar dentro de MessBook.
+        // que el equipo dueño se entere sin tener que estar dentro de Messbook.
         // Solo en alta: ningún otro evento manda correo.
         tkCorreoNuevoTicket($conn, $idTicket, $destinos, $solicitante);
     }

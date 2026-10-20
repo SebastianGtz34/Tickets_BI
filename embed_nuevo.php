@@ -219,19 +219,6 @@ function aplicarDestino() {
     $sel.prop('disabled', !depto || pendiente).val('').trigger('change');
 }
 
-// Etiqueta de optgroup → tipo (inverso de GRUPOS_CATEGORIA en js/funciones.js)
-var TIPO_LABEL_MAP = {};
-Object.keys(GRUPOS_CATEGORIA).forEach(function (k) { TIPO_LABEL_MAP[GRUPOS_CATEGORIA[k]] = k; });
-
-function renderOpcionCategoria(opt) {
-    if (opt.children) {
-        var color = getColorPorTipo(TIPO_LABEL_MAP[opt.text]);
-        return $('<strong>').css({ color: color, fontWeight: '700' }).text(opt.text);
-    }
-    if (!opt.id) return opt.text;
-    return opt.text;
-}
-
 function renderSeleccionCategoria(opt) {
     if (!opt.id) return opt.text;
     var color = getColorPorTipo(categoriaTipos[opt.id]);

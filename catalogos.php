@@ -72,6 +72,14 @@ include 'encabezado.php';
                             <option value="otro">Otro alcance</option>
                         </select>
                     </div>
+
+                    <div class="mb-3">
+                        <label for="catGrupo" class="form-label fw-600">Grupo <span class="text-muted fw-normal">(opcional)</span></label>
+                        <input type="text" class="form-control" id="catGrupo" name="grupo" maxlength="100"
+                               list="listaGrupos" placeholder="Ej. Asistencia, Tiempo y Cumplimiento" autocomplete="off">
+                        <datalist id="listaGrupos"></datalist>
+                        <div class="form-text">Encabezado bajo el que aparece en el alta de ticket. Vacío = se agrupa por tipo.</div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -85,6 +93,8 @@ include 'encabezado.php';
 </div>
 
 <script>
+var CATEGORIAS_CAT = {}; // id → categoría cargada, para editar sin pasar textos por el onclick
+
 $(function () {
     cargarCatalogo();
 });
@@ -101,7 +111,11 @@ function cargarCatalogo() {
             return;
         }
         var html = '';
+        var grupos = {};
+        CATEGORIAS_CAT = {};
         res.categorias.forEach(function (c) {
+            CATEGORIAS_CAT[c.id] = c;
+            if (c.grupo) grupos[c.grupo] = true;
             var activoHtml = c.activo == 1
                 ? '<span class="badge bg-success">Activo</span>'
                 : '<span class="badge bg-secondary">Inactivo</span>';
@@ -115,17 +129,23 @@ function cargarCatalogo() {
                 : '<button class="btn btn-sm btn-outline-success" onclick="toggleCategoria(' + c.id + ', 1)"><i class="fas fa-check me-1"></i>Activar</button>';
             html += '<tr>'
                 + '<td class="ps-3 fs-7">' + c.id + '</td>'
-                + '<td class="fw-600">' + escHtml(c.nombre) + '</td>'
+                + '<td class="fw-600">' + escHtml(c.nombre)
+                    + (c.grupo ? '<div class="fs-7 text-muted fw-normal">' + escHtml(c.grupo) + '</div>' : '')
+                + '</td>'
                 + '<td class="text-center">' + tipoHtml + '</td>'
                 + '<td class="text-center">' + activoHtml + '</td>'
                 + '<td class="text-center">'
-                    + '<button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModalEditar(' + c.id + ', \'' + escHtml(c.nombre).replace(/'/g, "\\'") + '\', \'' + (c.tipo || 'otro') + '\')">'
+                    + '<button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModalEditar(' + c.id + ')">'
                     + '<i class="fas fa-edit"></i></button>'
                     + btnToggle
                 + '</td>'
                 + '</tr>';
         });
         tbody.innerHTML = html;
+        // Sugerencias del campo Grupo: los que ya existen, para no reescribirlos distinto
+        $('#listaGrupos').empty().append(Object.keys(grupos).sort().map(function (g) {
+            return $('<option>').attr('value', g);
+        }));
     });
 }
 
@@ -134,14 +154,18 @@ function abrirModalNuevo() {
     document.getElementById('catId').value = '';
     document.getElementById('catNombre').value = '';
     document.getElementById('catTipo').value = 'sistema';
+    document.getElementById('catGrupo').value = '';
     document.getElementById('modalCategoriaLabel').textContent = 'Nueva Categoría';
 }
 
-function abrirModalEditar(id, nombre, tipo) {
+function abrirModalEditar(id) {
+    var c = CATEGORIAS_CAT[id];
+    if (!c) return;
     document.getElementById('formCategoria').classList.remove('was-validated');
     document.getElementById('catId').value = id;
-    document.getElementById('catNombre').value = nombre;
-    document.getElementById('catTipo').value = ['sistema', 'ti', 'rrhh'].indexOf(tipo) !== -1 ? tipo : 'otro';
+    document.getElementById('catNombre').value = c.nombre;
+    document.getElementById('catTipo').value = ['sistema', 'ti', 'rrhh'].indexOf(c.tipo) !== -1 ? c.tipo : 'otro';
+    document.getElementById('catGrupo').value = c.grupo || '';
     document.getElementById('modalCategoriaLabel').textContent = 'Editar Categoría';
     var modal = new bootstrap.Modal(document.getElementById('modalCategoria'));
     modal.show();
@@ -158,7 +182,8 @@ function guardarCategoria() {
         accion: accion,
         id: id,
         nombre: document.getElementById('catNombre').value.trim(),
-        tipo: document.getElementById('catTipo').value
+        tipo: document.getElementById('catTipo').value,
+        grupo: document.getElementById('catGrupo').value.trim()
     }, function (err, res) {
         if (err || !res) { mostrarAlerta('error', 'Error de comunicación.'); return; }
         if (res.success) {

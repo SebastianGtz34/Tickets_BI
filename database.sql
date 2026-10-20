@@ -15,6 +15,8 @@ USE mess_tickets_bi;
 CREATE TABLE IF NOT EXISTS tickets_categorias (
     id     INT UNSIGNED  NOT NULL AUTO_INCREMENT,
     nombre VARCHAR(100)  NOT NULL,
+    grupo  VARCHAR(100)  NULL
+           COMMENT 'Encabezado opcional en el select de alta (subcategorías). NULL = se agrupa por tipo',
     tipo   ENUM('sistema','otro','ti','rrhh') NOT NULL DEFAULT 'otro'
            COMMENT 'sistema = módulo MESS; ti = departamento TI; rrhh = Recursos Humanos; otro = otros alcances (KPIs, academy, sitio web, etc.)',
     activo TINYINT(1)    NOT NULL DEFAULT 1,
@@ -26,6 +28,27 @@ CREATE TABLE IF NOT EXISTS tickets_categorias (
 -- el INSERT/UPDATE de una categoría 'rrhh' falla o se guarda vacío:
 -- ALTER TABLE tickets_categorias
 --     MODIFY tipo ENUM('sistema','otro','ti','rrhh') NOT NULL DEFAULT 'otro';
+
+-- Migración 2026-10-20 (subcategorías de RRHH): columna `grupo` y sus 3 grupos.
+-- Los UPDATE deben afectar 5, 8 y 5 filas; si no, un nombre difiere en esa BD.
+-- ALTER TABLE tickets_categorias ADD COLUMN grupo VARCHAR(100) NULL AFTER nombre;
+-- UPDATE tickets_categorias SET grupo = 'Administración del Colaborador y Expediente'
+--  WHERE tipo = 'rrhh' AND nombre IN ('Aclaración de saldo / días de vacaciones',
+--    'Actualización de datos personales y de contacto',
+--    'Actualización de datos en directorio / organigrama',
+--    'Entrega de incapacidad / documento laboral',
+--    'Solicitud de constancia laboral o documento del expediente');
+-- UPDATE tickets_categorias SET grupo = 'Asistencia, Tiempo y Cumplimiento'
+--  WHERE tipo = 'rrhh' AND nombre IN ('Corrección por omisión de checada',
+--    'Justificación de retardo', 'Justificación de salida anticipada',
+--    'Permiso de salida menor a 3 horas', 'Permiso de salida mayor a 3 horas',
+--    'Permiso / Ausencia justificada', 'Solicitud de Home Office',
+--    'Solicitud de cambio de horario / jornada');
+-- UPDATE tickets_categorias SET grupo = 'Solicitudes Generales y Seguridad Operativa'
+--  WHERE tipo = 'rrhh' AND nombre IN ('Solicitud de orientación sobre proceso de RRHH',
+--    'Solicitud de EPP / Reposición de EPP', 'Reporte de condición insegura',
+--    'Reporte de acto inseguro / uso indebido de EPP',
+--    'Reporte inicial de incidente / accidente laboral');
 
 -- Datos iniciales de categorías
 INSERT INTO tickets_categorias (nombre, tipo, activo) VALUES
