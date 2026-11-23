@@ -29,6 +29,14 @@ CREATE TABLE IF NOT EXISTS tickets_categorias (
 -- ALTER TABLE tickets_categorias
 --     MODIFY tipo ENUM('sistema','otro','ti','rrhh') NOT NULL DEFAULT 'otro';
 
+-- Migración 2026-10-20 (estado 'cancelado'): el botón de cancelar (jun-2026) usa
+-- este estado, pero las BD creadas antes no lo tienen en el ENUM. Sin él, cancelar
+-- da 'Error de comunicación' (sql_mode estricto) o deja el estado vacío (no estricto).
+-- ALTER TABLE tickets
+--     MODIFY estado ENUM('nuevo','en_proceso','pendiente','resuelto','cerrado','cancelado') NOT NULL DEFAULT 'nuevo';
+-- Tickets que ya quedaron con estado vacío por ese motivo (cancelaciones):
+-- UPDATE tickets SET estado = 'cancelado' WHERE estado = '';
+
 -- Migración 2026-10-20 (subcategorías de RRHH): columna `grupo` y sus 3 grupos.
 -- Los UPDATE deben afectar 5, 8 y 5 filas; si no, un nombre difiere en esa BD.
 -- ALTER TABLE tickets_categorias ADD COLUMN grupo VARCHAR(100) NULL AFTER nombre;

@@ -28,6 +28,12 @@ if (!function_exists('tkConfigCorreo')) {
      */
     define('TK_LOGO_URL', TK_URL_BASE . '/img/' . rawurlencode('Tickets Messbook.png'));
 
+    /**
+     * Azul del boleto del logo de Tickets: franja del título, título del ticket,
+     * botón y enlaces. Con blanco encima da ~4.9:1 de contraste (legible).
+     */
+    define('TK_COLOR_ACENTO', '#176EDD');
+
     /** Carga (y cachea) la configuración SMTP, o null si falta el archivo. */
     function tkConfigCorreo(): ?array {
         static $cfg = false;
@@ -38,8 +44,8 @@ if (!function_exists('tkConfigCorreo')) {
     }
 
     /**
-     * Envuelve un contenido en la plantilla HTML institucional (azul MESS
-     * Pantone 072 C, el mismo acento que usa css/estilos.css).
+     * Envuelve un contenido en la plantilla HTML institucional (acento:
+     * TK_COLOR_ACENTO, el azul del logo de Tickets).
      * El $cuerpoHtml ya debe venir escapado por el llamador donde corresponda.
      *
      * Maquetado con TABLAS y anchos en atributo, no con div + max-width:
@@ -72,7 +78,7 @@ if (!function_exists('tkConfigCorreo')) {
             . ' style="width:' . $anchoLogo . 'px;max-width:' . $anchoLogo . 'px;height:auto;'
             . 'display:block;border:0;outline:none;text-decoration:none;">'
             . '</td></tr>'
-            . '<tr><td align="center" style="background:#176EDD;padding:12px 24px;color:#ffffff;'
+            . '<tr><td align="center" style="background:' . TK_COLOR_ACENTO . ';padding:12px 24px;color:#ffffff;'
             . 'font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;">'
             . htmlspecialchars($titulo, ENT_QUOTES, 'UTF-8') . '</td></tr>'
             . '<tr><td style="padding:24px 32px;font-family:Arial,Helvetica,sans-serif;'

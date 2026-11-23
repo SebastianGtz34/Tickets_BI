@@ -61,10 +61,16 @@ linea('estado', $cols['estado'] ?? '*** NO EXISTE ***');
 linea('fecha_cierre', $cols['fecha_cierre'] ?? '*** NO EXISTE ***');
 linea('fecha_actualizacion', $cols['fecha_actualizacion'] ?? '*** NO EXISTE ***');
 
-if (isset($cols['estado']) && stripos($cols['estado'], 'enum') === 0 && strpos($cols['estado'], "'cerrado'") === false) {
-    echo "\n>>> AQUÍ ESTÁ EL PROBLEMA: el ENUM de `estado` no incluye 'cerrado'.\n";
-    echo ">>> El UPDATE falla (modo estricto) o guarda '' (no estricto).\n";
+foreach (['cerrado', 'cancelado'] as $estadoReq) {
+    if (isset($cols['estado']) && stripos($cols['estado'], 'enum') === 0 && strpos($cols['estado'], "'$estadoReq'") === false) {
+        echo "\n>>> AQUÍ ESTÁ EL PROBLEMA: el ENUM de `estado` no incluye '$estadoReq'.\n";
+        echo ">>> Con sql_mode estricto el UPDATE lanza excepción y la pantalla dice\n";
+        echo ">>> 'Error de comunicación'; sin modo estricto guarda '' (estado vacío).\n";
+        echo ">>> Corrige con el ALTER de database.sql (migración 2026-10-20, estado).\n";
+    }
 }
+$vacios = (int)$conn->query("SELECT COUNT(*) n FROM tickets WHERE estado = ''")->fetch_assoc()['n'];
+linea('Tickets con estado vacío', $vacios . ($vacios ? '  <-- cancelaciones que el ENUM rechazó' : ''));
 if (!isset($cols['fecha_cierre'])) {
     echo "\n>>> AQUÍ ESTÁ EL PROBLEMA: falta la columna fecha_cierre; el UPDATE de\n";
     echo ">>> cerrarTicket la usa y falla con 'Unknown column'.\n";

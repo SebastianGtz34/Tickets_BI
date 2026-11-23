@@ -249,7 +249,7 @@ if (!function_exists('tkNotifEquipoBi')) {
         $filas .= $fila('Fecha', $esc(date('d/m/Y H:i', strtotime($t['fecha_creacion']))));
         if (!empty($t['link'])) {
             $filas .= $fila('Enlace',
-                '<a href="' . $esc($t['link']) . '" style="color:#050D9E;">' . $esc($t['link']) . '</a>');
+                '<a href="' . $esc($t['link']) . '" style="color:' . TK_COLOR_ACENTO . ';">' . $esc($t['link']) . '</a>');
         }
         if ((int)$t['n_adjuntos'] > 0) {
             $filas .= $fila('Adjuntos', (int)$t['n_adjuntos'] . ' archivo(s) en el ticket');
@@ -265,13 +265,13 @@ if (!function_exists('tkNotifEquipoBi')) {
 
         $cuerpo =
             '<p style="margin:0 0 16px;">Se registró un nuevo ticket para tu equipo:</p>'
-            . '<p style="margin:0 0 14px;font-size:17px;font-weight:bold;color:#050D9E;">'
+            . '<p style="margin:0 0 14px;font-size:17px;font-weight:bold;color:' . TK_COLOR_ACENTO . ';">'
             . $esc($t['titulo']) . '</p>'
             . '<table style="font-size:14px;line-height:1.6;border-collapse:collapse;">' . $filas . '</table>'
-            . '<div style="margin:18px 0 0;padding:12px 16px;background:#f8f9fa;border-left:3px solid #050D9E;'
+            . '<div style="margin:18px 0 0;padding:12px 16px;background:#f8f9fa;border-left:3px solid ' . TK_COLOR_ACENTO . ';'
             . 'border-radius:4px;font-size:14px;">' . $descripcion . '</div>'
             . '<p style="margin:24px 0 8px;text-align:center;">'
-            . '<a href="' . $url . '" style="display:inline-block;padding:11px 26px;background:#050D9E;'
+            . '<a href="' . $url . '" style="display:inline-block;padding:11px 26px;background:' . TK_COLOR_ACENTO . ';'
             . 'color:#ffffff;text-decoration:none;border-radius:6px;font-weight:bold;">Ver ticket</a></p>'
             . '<p style="margin:0;text-align:center;font-size:12px;color:#6c757d;">'
             . 'Si el enlace te pide iniciar sesión, entra a Messbook y abre el sistema de Tickets.</p>';
