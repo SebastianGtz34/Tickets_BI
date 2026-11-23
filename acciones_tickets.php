@@ -19,15 +19,26 @@ function responder(bool $success, string $message = '', array $extra = []): void
     exit;
 }
 
+/**
+ * Siguiente folio del año: el número más alto ya usado en los folios de ese año + 1.
+ * No sale del `id` (es global: en enero brincaría de 001 al id) ni de contar los
+ * tickets del año (hay ids borrados: el conteo repetiría folios existentes).
+ * Dos altas simultáneas pueden calcular el mismo; crearTicket reintenta si el
+ * UNIQUE de folio lo rechaza.
+ */
 function generarFolio(mysqli $conn): string {
-    $anio = date('Y');
-    $sql  = "SELECT MAX(id) AS id FROM tickets WHERE YEAR(fecha_creacion) = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('i', $anio);
+    $anio   = (int)date('Y');
+    $prefijo = "TKT-$anio-";
+    $patron  = $prefijo . '%';
+    $stmt = $conn->prepare(
+        "SELECT MAX(CAST(SUBSTRING_INDEX(folio, '-', -1) AS UNSIGNED)) AS n
+         FROM tickets WHERE folio LIKE ?"
+    );
+    $stmt->bind_param('s', $patron);
     $stmt->execute();
-    $n = (int)$stmt->get_result()->fetch_assoc()['id'] + 1;
+    $n = (int)$stmt->get_result()->fetch_assoc()['n'] + 1;
     $stmt->close();
-    return sprintf('TKT-%d-%03d', $anio, $n);
+    return sprintf('%s%03d', $prefijo, $n);
 }
 
 /**
@@ -164,14 +175,26 @@ switch ($accion) {
         }
         $linkValue = $link !== '' ? $link : null;
 
-        $folio = generarFolio($conn);
-
         $stmt = $conn->prepare(
             "INSERT INTO tickets (folio, titulo, descripcion, link, id_categoria, prioridad, estado, no_empleado_solicitante)
              VALUES (?, ?, ?, ?, ?, ?, 'nuevo', ?)"
         );
         $stmt->bind_param('ssssiss', $folio, $titulo, $descripcion, $linkValue, $idCat, $prioridad, $noEmpleado);
-        if (!$stmt->execute()) {
+
+        // Si otra alta simultánea tomó el mismo folio, el UNIQUE lo rechaza (1062):
+        // se recalcula y se reintenta. bind_param va por referencia, así que basta
+        // con reasignar $folio.
+        $creado = false;
+        for ($intento = 0; $intento < 5 && !$creado; $intento++) {
+            $folio = generarFolio($conn);
+            try {
+                $creado = $stmt->execute();
+                if (!$creado && $stmt->errno !== 1062) break;
+            } catch (mysqli_sql_exception $e) {
+                if ($e->getCode() !== 1062) break;
+            }
+        }
+        if (!$creado) {
             responder(false, 'Error al crear el ticket.');
         }
         $idTicket = (int)$conn->insert_id;
